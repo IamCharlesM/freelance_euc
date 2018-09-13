@@ -1,0 +1,684 @@
+
+function check_login() {
+    var user_info = check_user_info();
+    if (user_info == undefined || user_info == "") {
+        redirect_page("index.html");
+        return false;
+    }
+    return true;
+}
+
+function update_cookie(p_param) {
+    sendRequest(login_service_url, p_param, function(statusCode, responseJSON) {
+        if (statusCode == 200) {
+            if (responseJSON.error == "NOT_FOUND") {
+                show_message_popup("Sign in Failed", "Wrong Email Address or Password. Try again.");
+                remove_user_cookie();
+            } else if (responseJSON.error == "DISABLED") {
+                show_message_popup("Sign in Failed", "Your account is disabled.");
+                remove_user_cookie();
+            } else if (responseJSON.error == "LOCKED") {
+                show_message_popup("Sign in Failed", "Your account is locked.");
+                remove_user_cookie();
+            } else {
+                $.cookie("login_info", responseJSON); // Set cookie for userinfo
+                show_user_info();
+            }
+
+            $('#login-content').slideUp(); // Close login form
+        } else {
+            // If error
+            alert(JSON.stringify(responseJSON));
+        }
+    });
+}
+
+// Get and show user info from cookie if the user info is available then
+// show welcome user, logout sections, and hide login and signup sections
+function show_user_info() {
+    $("#welcome_username").html("");
+
+    if ($.cookie("login_info") == undefined || $.cookie("login_info") == "") {
+        $("#nav_manage-properties").hide();
+        $("#modify-prof").hide();
+        $('#nav-links').addClass('nav-fix logged-out');
+        $('#nav-links').removeClass('logged-in');
+
+        $("#outer_welcome").hide();
+        $("#a_logout").hide();
+
+        $("#a_register").show();
+        $("#outer_signin").show();
+
+        $('#mobile').removeClass('social-loggedin');
+        $('#login').removeClass('login-padding-none');
+    } else {
+        resetLoginForm();
+        $("#a_register").hide();
+        $("#outer_signin").hide();
+
+        $("#welcome_username").html(check_user_info().user.firstName);
+        $("#outer_welcome").show();
+        $("#a_logout").show();
+
+        $("#nav_manage-properties").show();
+        $("#modify-prof").show();
+        $('#nav-links').removeClass('nav-fix logged-out');
+        $('#nav-links').addClass('logged-in');
+
+        $('#mobile').addClass('social-loggedin');
+        $('#login').addClass('login-padding-none');
+    }
+    showNavActive();
+}
+
+// Clear user cookie and hide welcome user, logout sections, and show login and signup sections
+function remove_user_cookie() {
+    $("#welcome_username").html(""); // Clear user name first
+    $.removeCookie('login_info'); // Remove cookie_login_info cookie
+}
+
+// login
+function on_login() {
+    var email = $(".login-form input[name=email]").val();
+    var password = $(".login-form input[name=password]").val();
+    
+    var param = {
+        "email": email
+        ,"password": password
+    }
+    
+    sendRequest(login_service_url, param, function(statusCode, responseJSON) {
+        if (statusCode == 200) {
+            if (responseJSON.error == "NOT_FOUND") {
+                show_message_popup("Sign in Failed", "Wrong Email Address or Password. Try again.");
+                remove_user_cookie();
+            } else if (responseJSON.error == "DISABLED") {
+                show_message_popup("Sign in Failed", "Your account is disabled.");
+                remove_user_cookie();
+            } else if (responseJSON.error == "LOCKED") {
+                show_message_popup("Sign in Failed", "Your account is locked.");
+                remove_user_cookie();
+            } else {
+                $.cookie("login_info", responseJSON); // Set cookie for userinfo
+                show_user_info();
+            }
+
+            $('#login-content').slideUp(); // Close login form
+        } else {
+            // If error
+            alert(JSON.stringify(responseJSON));
+        }
+    });
+}
+
+// logout
+function on_logout() {
+    remove_user_cookie();
+    show_user_info();
+    redirect_page("index.html");
+}
+
+// register
+function on_register() {
+	show_blockui();
+    var param = {
+        "firstName": $("#firstName").val()
+        , "lastName": $("#lastName").val()
+        ,"email": $("#email").val()
+        ,"password": $("#password").val()
+        ,"emailAddress": $("#emailAddress").val()
+		,"referralEmailAddress": $("#referralEmail").val()
+    }
+
+	try {
+		add_request(users_service_url, param, function(p_data) {
+			//$('#register-modal').modal('hide');
+
+			if (p_data["error"] != undefined && p_data["error"] == "EMAIL_OCCUPIED") {
+				show_message_popup("Error", "An account has already been created using this email address.  Please use a different email address.");
+			} else if (p_data["error"] != undefined && p_data["error"] == "INVALID_REFERRAL") {
+				show_message_popup("Error", "Unable to locate an owner with the specified email address (" + $("#referralEmail").val() + ").  Please check it and try again.");
+			} else if (p_data["error"] != undefined && p_data["error"] == "INTERNAL_SERVER_ERROR") {
+				if(p_data["message"] !=undefined){
+					show_message_popup("Server Error", p_data["message"]);
+				} else {
+					show_message_popup("Server Error", "Unable to complete your registration at this time due to an internal server error.  Please contact contact technical support.");
+				}
+			} else {
+				show_message_popup("Registration Successful", "We have sent you a verification email.  Please follow the instructions outlined in the email to confirm your email address.");
+				$('#register-modal').modal('hide');
+				$('#register-form')[0].reset();
+			}
+		});
+	}
+	catch(err) {
+		show_message_popup("Error", "Unable to complete your registration at this time. Please contact technical support.");
+	}
+	finally{
+		hide_blockui();
+	}
+}
+
+// send the password to the owner
+function on_forgot_password(p_email) {
+    var param = {
+        "email": p_email
+    }
+
+    sendRequest(forgotpassword_service_url, param, function(status_code, p_data) {
+        if (status_code == 500) {
+            show_message_popup("Sent Result", p_data["message"]);
+        } else {
+            if (p_data["error"] != undefined && p_data["error"] == "RECROD_NOT_FOUND") {
+                show_message_popup("Sent Result", p_data["message"]);
+            } else {
+                $('#forgot-mail-sent').modal('show');
+				$('#forgot_password_email').val('');
+            }
+        }
+    });
+}
+
+// Define days available key and value pair object
+var daysAvailableObj = {
+    "checkboxSun": 0
+    , "checkboxMon": 1
+    , "checkboxTue": 2
+    , "checkboxWed": 3
+    , "checkboxThu": 4
+    , "checkboxFri": 5
+    , "checkboxSat": 6
+}
+
+var daysAvailableMap = {
+    "key_0": "checkboxSun"
+    , "key_1": "checkboxMon"
+    , "key_2": "checkboxTue"
+    , "key_3": "checkboxWed"
+    , "key_4": "checkboxThu"
+    , "key_5": "checkboxFri"
+    , "key_6": "checkboxSat"
+}
+
+function uncheck_daysAvailable() {
+    $("#checkboxSun").prop('checked', false);
+    $("#checkboxMon").prop('checked', false);
+    $("#checkboxTue").prop('checked', false);
+    $("#checkboxWed").prop('checked', false);
+    $("#checkboxThu").prop('checked', false);
+    $("#checkboxFri").prop('checked', false);
+    $("#checkboxSat").prop('checked', false);
+}
+
+/*$('#modify-profile_timezone').on('shown.bs.select', function (e) {
+  // do something...
+});*/
+
+function show_timezones() {
+    if ($('#modify-profile_timezone').val() != undefined) return;
+
+    $('#modify-profile_timezone').html('');
+
+    var timezone_name_list = Object.keys(moment.tz._zones)
+        .map(function(k) {
+            return moment.tz._zones[k].split('|')[0]; 
+        }).filter(function(z) { 
+            return z.indexOf('/') >= 0; 
+        }).sort();
+
+    for (var i = 0; i < timezone_name_list.length; i++) {
+        var temp_timezone_name = timezone_name_list[i];
+        var temp_utc_offset = moment.tz(temp_timezone_name).format("Z");
+        var temp_value = "(UTC" + temp_utc_offset + ") " + temp_timezone_name.replace(/_/g, " ");
+        temp_timezone_name = temp_timezone_name.replace('&nbsp;','');
+        temp_value = temp_value.replace('&nbsp;','');
+        $('#modify-profile_timezone').append('<option value="' + temp_timezone_name + '">' + temp_value + '</option>');
+    }
+
+
+    // $('#modify-profile_timezone').selectpicker('maxOptions', 2);
+    // $('#modify-profile_timezone').selectpicker("data-max-options", 2);
+
+    $('#modify-profile_timezone').selectpicker('refresh');
+
+    // keep the same css style with the existing scheme
+    $($("button[data-id='modify-profile_timezone']")[0]).attr('class', 'dropdown-toggle');
+    $($("button[data-id='modify-profile_timezone']")[0]).css({
+        "border": "2px solid #5a2e8a"
+        ,"font-size": "16px"
+        ,"text-transform": "none"
+        ,"border-radius": "2px"
+        ,"padding": "8px 12px 8px 12px"
+    });
+
+    $($("button[data-id='modify-profile_timezone']").find(".caret")[0]).css({
+        "color": "#96c93e"
+        ,"border-right": "5px solid transparent"
+        ,"border-left": "5px solid transparent"
+        ,"border-top": "5px dashed"
+    });
+
+    /*
+    //todo add green color for outside border
+    $($("button[data-id='modify-profile_timezone']")[0]).click(function() {
+        //$(this).unbind("mouseenter mouseleave");
+        debugger;
+        //$(this).css('color', 'white');
+        return;
+    });
+    */
+}
+
+// get user info from user api
+function get_user_info() {
+    uncheck_daysAvailable();
+    
+    get_one(users_service_url, get_user_id(), function(p_data) {
+        if (p_data == undefined) return;
+
+        // if already verified, hide resend verification button
+        if (p_data.status == 1) {
+            $("#modify-profile_resend_verification").css("visibility", "hidden");
+        } else {
+            $("#modify-profile_resend_verification").css("visibility", "visible");
+        }
+
+        $("#modify-profile_firstName").val(p_data.firstName);
+        $("#modify-profile_firstName").attr("old_value", p_data.firstName);
+        $("#modify-profile_lastName").val(p_data.lastName);
+        $("#modify-profile_lastName").attr("old_value", p_data.lastName);
+        $("#modify-profile_email").val(p_data.email);
+        $("#modify-profile_email").attr("old_value", p_data.email);
+        $("#modify-profile_email2").val(p_data.email);
+        $("#modify-profile_password").val(p_data.password);
+        $("#modify-profile_password").attr("old_value", p_data.password);
+        $("#modify-profile_password2").val(p_data.password);
+        $("#modify-profile_phone").val(p_data.phone);
+        $("#modify-profile_phone").attr("old_value", p_data.phone);
+        $("#modify-profile_address1").val(p_data.address1);
+        $("#modify-profile_address1").attr("old_value", p_data.address1);
+        $("#modify-profile_address2").val(p_data.address2);
+        $("#modify-profile_address2").attr("old_value", p_data.address2);
+        $("#modify-profile_city").val(p_data.city);
+        $("#modify-profile_city").attr("old_value", p_data.city);
+        $("#modify-profile_state").val(p_data.state);
+        $("#modify-profile_state").attr("old_value", p_data.state);
+        $("#modify-profile_postalCode").val(p_data.postalCode);
+        $("#modify-profile_postalCode").attr("old_value", p_data.postalCode);
+        $("#modify-profile_country").val(p_data.country);
+        $("#modify-profile_country").attr("old_value", p_data.country);
+
+        // show owner's timezone
+        setTimeout(function() {
+            show_timezones();
+            // debugger
+            $("#modify-profile_timezone").val(p_data.timezone.replace('&nbsp;',''));
+            $('#modify-profile_timezone').selectpicker('refresh');
+
+            $('button[data-id=modify-profile_timezone]').html( $('button[data-id=modify-profile_timezone]').html().replace('&nbsp;','') )
+
+        }, 300);
+
+        $("#modify-profile_daysAvailable").val(p_data.daysAvailable);
+
+        if (p_data.daysAvailable != "" && p_data.daysAvailable.split(",").length > 0) {
+            var checkedIds = p_data.daysAvailable.split(",");
+
+            $.each(checkedIds, function(index, value) {
+                $("#" + daysAvailableMap["key_" + value]).prop("checked", true);
+            });
+        }
+
+        $("#modify-profile_hoursAvailableFrom").val(p_data.hoursAvailableFrom);
+        $("#modify-profile_hoursAvailableFrom").attr("old_value", p_data.hoursAvailableFrom);
+        $("#span_modify-profile_hoursAvailableFrom").html(getAMPM(p_data.hoursAvailableFrom));
+        $("#modify-profile_hoursAvailableTo").val(p_data.hoursAvailableTo);
+        $("#modify-profile_hoursAvailableTo").attr("old_value", p_data.hoursAvailableTo);
+        $("#span_modify-profile_hoursAvailableTo").html(getAMPM(p_data.hoursAvailableTo));
+    }, true);
+}
+
+// modify
+function update_profile() {
+    $(document).find('#edit-prof-form').valid;      //to run validations
+    setTimeout(function(){
+        var length=$(document).find('#edit-prof-form').find('.has-error').length;
+        if(length===0) {
+            var header = {
+                "id_token": get_id_token()
+            }
+
+            var param = {
+                "userId": get_user_id()
+            }
+
+            setup_param(param, "modify-profile_firstName", "", "firstName");
+            setup_param(param, "modify-profile_lastName", "", "lastName");
+            setup_param(param, "modify-profile_email", "", "email");
+            setup_param(param, "modify-profile_password", "", "password");
+            setup_param(param, "modify-profile_phone", "", "phone");
+            setup_param(param, "modify-profile_address1", "", "address1");
+            setup_param(param, "modify-profile_address2", "", "address2");
+            setup_param(param, "modify-profile_city", "", "city");
+            setup_param(param, "modify-profile_state", "", "state");
+            setup_param(param, "modify-profile_postalCode", "", "postalCode");
+            setup_param(param, "modify-profile_country", "", "country");
+            setup_param(param, "modify-profile_hoursAvailableFrom", "", "hoursAvailableFrom");
+            setup_param(param, "modify-profile_hoursAvailableTo", "", "hoursAvailableTo");
+
+            // Handle days available, pass 0 to 6, comma separated (Sunday to Saturday) to backend api
+            var ids = "";
+            $('input:checkbox[id^="checkbox"]:checked').each(function () {
+                ids += "," + daysAvailableObj[this.id];
+            });
+            ids = ids.substring(1, ids.length);
+            if ($("#modify-profile_daysAvailable").val() != ids) {
+                param["daysAvailable"] = ids;
+            }
+
+            // save image to s3
+            $('#uploaded_images_wrapper_userprofile img[src*="data"]').each(function(index) {
+                var tempImageBytesStr = $(this).attr("src").split("data:image/jpg;base64,")[1];
+                var temp_param = {
+                    "uploadedImageBytesStr": tempImageBytesStr
+                }
+                update_request(userprofile_service_url, temp_param, function (p_data) {
+                    if (p_data.status != 200) {
+                        alert(p_data.message);
+                    }
+                }, header);
+            });
+
+            param["timezone"] = $("#modify-profile_timezone").val();
+
+            //Return if no changes
+            if (Object.keys(param).length <= 1) {
+                $('#edit-profile').modal('hide');
+                show_message_popup("Result", "Updated successfully.");
+                return;
+            }
+
+            update_request(users_service_url, param, function (p_data) {
+                $('#edit-profile').modal('hide');
+                show_message_popup("Result", p_data["message"]);
+
+                var email = $("#modify-profile_email").val();
+                var password = $("#modify-profile_password").val();
+                
+                var param = {
+                    "email": email
+                    ,"password": password
+                }
+
+                update_cookie(param);
+            }, header);
+        }
+    },300);
+
+}
+
+function resend_verification() {
+    sendRequest(resendverification_service_url, {}, function(status_code, p_data) {
+        if (status_code == 200) {
+            show_message_popup("Verification Email Request", "We have sent a verification email to you.  Please follow the instructions outlined in the email to confirm your email address.");
+        } else {
+            show_message_popup("Verification Email Request", "The request to send the verification email failed.  Please contact technical support.");
+        }
+    }, "GET", true);
+}
+
+/*
+// When document is ready
+$(document).ready(function() {
+    // Show user info after the page is refreshed or reloaded
+    show_user_info();
+
+    $(document).on("click", "#a_register", function() {
+        $('#register-form')[0].reset();
+    });
+
+    //add login action
+    $(document).on('submit','#login-form',function(e) {
+        // debugger;
+        e.preventDefault();
+        $(this).valid;      //to run validations
+        if(checkValidity($(this)))
+        {
+            //entered data is valid
+            on_login();
+            // resetLoginForm();
+            // $('#nav-links').removeClass('nav-fix');
+        }
+        else{
+            //form is invalid
+        }
+    });
+
+    // add register action
+    setTimeout(function() {
+        $('#register-form').submit(function(e) {
+            e.preventDefault();
+            $(this).valid;      //to run validations
+            //todo uncomment below
+            if(checkValidity($(this)))
+            {
+                //entered data is valid
+                on_register();
+                // resetFormFields($('#register-form'));
+            }
+            else{
+                //form is invalid
+            }
+        });
+    }, 200);
+
+    // add forgot password action
+    $(document).on('submit', '#forgot-pass-form', function(e) {
+        e.preventDefault();
+        $(this).valid;      //to run validations
+        if(checkValidity($(this)))
+        {
+            var temp_email = $("#forgot_password_email").val();
+            //entered data is valid
+            $('#closeforgotP').trigger('click');
+
+            on_forgot_password(temp_email);
+        }
+        else{
+            //form is invalid
+        }
+
+    });
+
+    // Add logout click event
+    $("#id_logout a").click(function() {
+        removeUserCookie();
+        return false;
+    });
+
+    // Add signup click event
+    $("#button-create-account").click(function() {
+        on_signup();
+        return false;
+    });
+
+    // show modify profile info
+    $(document).on("click",'#modify-prof', function() {
+        var user_info = check_user_info();
+
+        if (user_info == undefined) {
+            alert("Please login first");
+        } else {
+            get_user_info();
+            reset_userprofile();
+            init_uploadprofile();
+
+            //show user profile image
+            load_userprofile();
+            $('#edit-profile').modal({keyboard: false, show:true, backdrop:"static"});
+        }
+    });
+});
+*/
+
+
+// take action after common pages loaded
+var b_header_loaded = false;
+$(document).on('file-loaded', function(e, file, elmnt) {
+    if (file !== 'header.html') {
+        // Show user info after the page is refreshed or reloaded
+        setTimeout(function() { show_user_info() }, 100);
+
+        $(document).on("click", "#a_register", function() {
+            $('#register-form')[0].reset();
+        });
+
+        //add login action
+        $(document).on('submit','#login-form',function(e) {
+            // debugger;
+			e.stopImmediatePropagation();  //FMA - Added this line as bubbling was causing this event to fire multiple times.
+			e.preventDefault();
+			try {
+				$(this).valid;      //to run validations
+				if(checkValidity($(this)))
+				{
+					//entered data is valid
+					show_blockui();
+					on_login();
+					// resetLoginForm();
+					// $('#nav-links').removeClass('nav-fix');
+				}
+				else{
+					//form is invalid
+				}
+			} catch(err) {
+				show_message_popup("Error", "Login Error: " +  + err.message);
+			} finally{
+				hide_blockui();
+			}
+        });
+		
+		//add register action
+        $(document).on('submit','#register-form',function(e) {
+            // debugger;
+			e.stopImmediatePropagation();  //FMA - Added this line as bubbling was causing this event to fire multiple times.
+			e.preventDefault();
+			try {
+				$(this).valid;      //to run validations
+				if(checkValidity($(this)))
+				{
+					//entered data is valid
+					show_blockui();
+					on_register();
+					// resetFormFields($('#register-form'));
+				}
+				else{
+					//form is invalid
+				}
+			} catch(err) {
+				show_message_popup("Error", "Forgot Password Error: " + err.message);
+			} finally{
+				hide_blockui();
+			}
+        });
+
+        // add forgot password action
+        $(document).on('submit', '#forgot-pass-form', function(e) {
+			e.stopImmediatePropagation();
+			e.preventDefault();
+            $(this).valid;      //to run validations
+			try {
+				if(checkValidity($(this)))
+				{
+					var temp_email = $("#forgot_password_email").val();
+					//entered data is valid
+					$('#closeforgotP').trigger('click');
+					show_blockui();
+					on_forgot_password(temp_email);
+				}
+				else{
+					//form is invalid
+				}
+			} catch(err) {
+				show_message_popup("Error", "Forgot Password Error: " + err.message);
+			} finally{
+				hide_blockui();
+			}
+        });
+
+        // Add logout click event
+        $("#id_logout a").click(function() {
+            removeUserCookie();
+            return false;
+        });
+
+        // Add signup click event
+        $("#button-create-account").click(function() {
+            on_signup();
+            return false;
+        });
+
+        if (!b_header_loaded) {
+            // show modify profile info
+            $(document).on("click",'#modify-prof', function() {
+                var user_info = check_user_info();
+
+                if (user_info == undefined) {
+                    alert("Please login first");
+                } else {
+					try {
+						get_user_info();
+						reset_userprofile();
+						init_uploadprofile();
+
+						//show user profile image
+						load_userprofile();
+						$('#edit-profile').modal({keyboard: false, show:true, backdrop:"static"});
+					} catch(err) {
+						show_message_popup("Error", "Modify-Prof Error:" + err.message);
+					} finally{
+						hide_blockui();
+					}
+                }
+            });
+        }
+        
+        b_header_loaded = true;
+    }
+
+    if (file == 'owner/modify-profile.html') {
+        try {
+            initAutocomplete(); // for address autocompete drop down list
+        } catch(ex) {
+
+        }
+    	
+        //init_uploadprofile();
+
+        // add modify profile action
+        $('#edit-prof-form').submit(function(e) {
+            e.preventDefault();
+            $('#edit-prof-form').find('.select-value').each(function(){
+                selectError(this);
+            });
+
+            $(this).valid;      //to run validations
+            if(checkValidity($(this))) {
+                //entered data is valid
+				try {
+					show_blockui();
+					update_profile();
+				} catch(err) {
+					show_message_popup("Error", "Edit-Prof-Form Error: " + err.message);
+				} finally{
+					hide_blockui();
+				}
+                // resetFormFields($('#edit-prof-form'));
+            } else {
+                //form is invalid
+            }
+        });
+    }
+});
+

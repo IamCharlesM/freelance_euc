@@ -1,0 +1,61 @@
+$(document).ready(function(){
+    var destination = "Oopsie!  What’s your vacation destination?";
+    var destinationMinLength = "Destination field must be greater than 5 characters";
+    var arriveData = " Whoops!  Please enter arrival date";
+    var wrongFormat = "Format is not correct";
+    var departureDate = "Whoops!  Please enter departure date.";
+    
+    $('[data-val-for=dest]').on('validation-check-complete',function(event, notifiedElem, data, inp){
+        if(data && !data.status){
+            if(data.detail.required == false)
+                notifiedElem.text(destination);
+            else if(data.detail.minLength == false)
+                notifiedElem.text(destinationMinLength);
+        }else{  //valid
+            notifiedElem.text('');
+        }
+    });
+    $('[data-val-for=arrive_date]').on('validation-check-complete', function(event, notifiedElem, data, inp){
+        if(data && !data.status){
+            if(data.detail.required_if_present == false){
+                notifiedElem.text(arriveData);
+            }
+            if(inp.val()!=''){
+                if(data.detail.formatDate == false){
+                    notifiedElem.text(wrongFormat);
+                }else if (data.detail.date_checking_arrival == false){
+                    notifiedElem.text('The Arrival date must be today or later and must be prior to the Departure Date.');
+                }
+            }
+        }else{
+            notifiedElem.text('');
+        }
+    });
+    $('[data-val-for=departure_date]').on('validation-check-complete', function(event, notifiedElem, data, inp){
+        if(data && !data.status){
+            if(data.detail.required_if_present == false){
+                notifiedElem.text(departureDate);
+            }
+            if(inp.val()!='') {
+                if (data.detail.formatDate == false) {
+                    notifiedElem.text(wrongFormat);
+                } else if (data.detail.date_checking_departure == false) {
+                    notifiedElem.text('The Departure date must be the same day or after the Arrival Date.');
+                }
+            }
+        }else{
+            notifiedElem.text('');
+        }
+    });
+    $('[data-val-for=departure_date]').on('validation-check-complete', function(event, notifiedElem, data, inp){
+        if(data && !data.status){
+            if(data.detail.required_if_present == false){
+                notifiedElem.text(departureDate);
+            }else if(data.detail.checkDateFormat == false){
+                notifiedElem.text(wrongFormat);
+            }
+        }else{
+            notifiedElem.text('');
+        }
+    });
+});

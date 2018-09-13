@@ -1,0 +1,387 @@
+$.cookie.json = true;
+
+//var api_host_url = "https://eucalyptusvr.com:";	//PROD Environment
+//var s3_host_url = "https://vr-prod-001.s3.amazonaws.com";  //PROD Environment
+//var api_host_url = "http://localhost:";  //Local PC (uses http, not https)
+var api_host_url = "https://eucatopia.com:";	//DEV002 Environment
+var s3_host_url = "https://vr-dev-002.s3.amazonaws.com";	//DEV002 Environment
+var s3_host_url_home_image = s3_host_url + "/HotSpots";
+var s3_host_url_user_profile = s3_host_url + "/UserProfiles";
+var s3_host_url_property = s3_host_url + "/Properties";
+
+var users_service_port = 8080;
+var properties_service_port = 8081;
+var admin_service_port = 8082;
+
+var users_service_url = users_service_port + "/v1/users";
+var properties_service_url = properties_service_port + "/v1/properties";
+var payments_service_url = properties_service_port + "/v1/payments";
+
+var properties_owner_list_service_url = properties_service_url + "/ownerlist";
+
+var propertydetail_service_url = properties_service_port + "/v1/propertydetail";
+var propertyamenity_service_url = properties_service_port + "/v1/propertyamenity";
+var propertystars_service_url = properties_service_url + "/stars";
+
+var rates_service_url = properties_service_port + "/v1/rates";
+
+var emails_service_url = properties_service_port + "/v1/emails";
+var contactme_service_url = emails_service_url + "/contactme";
+var contactus_service_url = emails_service_url + "/contactus";
+var sitefeedback_service_url = emails_service_url + "/sitefeedback";
+var reportproperty_service_url = emails_service_url + "/reportproperty";
+var forgotpassword_service_url = emails_service_url + "/forgotpassword";
+var resendverification_service_url = emails_service_url + "/resendverification";
+
+var feedbacks_service_url = properties_service_port + "/v1/feedbacks";
+
+var reservations_service_url = properties_service_port + "/v1/reservations";
+
+var login_service_url = users_service_port + "/v1/login";
+
+var preactivate_service_url = payments_service_url + "/preactivate";
+var stripe_customer_service_url = payments_service_url + "/customers";
+var stripe_subscription_service_url = payments_service_url + "/subscriptions";
+
+var email_confirmation_service_url = users_service_url + "/activate";
+
+var userprofile_service_url = properties_service_port + "/v1/userprofile";
+
+var upload_service_url = properties_service_port + "/v1/upload";
+var upload_service_url_reportproperty = upload_service_url + "/reportproperty";
+var upload_service_url_userprofile = upload_service_url + "/userprofile";
+var upload_service_url_propertymain = upload_service_url + "/propertymain";
+var upload_service_url_propertyadditional = upload_service_url + "/propertyadditional";
+var upload_service_url_feedback = upload_service_url + "/feedback";
+
+
+var homepageimages_service_url = admin_service_port + "/v1/admin/homepageimages"
+
+// AJAX request with callback support
+// If param_request_method not passed, "POST" method will be used as default
+function sendRequest(param_url, param_data, param_callback, param_request_method, p_header_tag) {
+    if (param_request_method != "GET") {
+		param_data = JSON.stringify(param_data) // Convert josn object to json string
+	}
+
+    var p_header;
+    if (p_header_tag != undefined && p_header_tag) {
+        p_header = {
+            "id_token": get_id_token()
+        }
+    }
+
+	$.ajax({
+        contentType:"application/json; charset=utf-8",
+		url: api_host_url + param_url,
+		type: (param_request_method == undefined || param_request_method == null) ? "POST" : param_request_method,
+		data: param_data,
+		dataType: "json",
+        headers: p_header,
+		success: function(result) {
+			// Success, pass 200
+			param_callback(200, result);
+	    },
+		error:function (xhr, ajaxOptions, thrownError) {
+			// Error, pass xhr.satus
+            param_callback(xhr.status, xhr.responseJSON);
+		}
+	});
+}
+
+function get_one(param_url, param_id, param_callback, p_header_tag) {
+	if (param_url == undefined) return;
+	if (param_id == undefined) return;
+	if (param_callback == undefined) return;
+
+    sendRequest(param_url + "/" + param_id + "/", {}, function(statusCode, responseJSON) {
+        if (statusCode == 200) {
+            param_callback(responseJSON);
+        } else if (statusCode == 400) {
+            alert(JSON.stringify(responseJSON));
+        } else if (statusCode == 401) {
+            alert(JSON.stringify(responseJSON));
+        } else {
+            alert(JSON.stringify(responseJSON));
+        }
+    }, "GET", p_header_tag);
+}
+
+function get_list(param_url, param_data, param_callback, p_header) {
+    if (param_url == undefined) return;
+    if (param_data == undefined) return;
+    if (param_callback == undefined) return;
+
+    sendRequest(param_url, param_data, function(statusCode, responseJSON) {
+        if (statusCode == 200) {
+            param_callback(responseJSON);
+        } else {
+            // If error
+            alert(JSON.stringify(responseJSON));
+        }
+    }, "GET", p_header);
+}
+
+function get_searchlist(param_url, param_data, param_callback) {
+    if (param_url == undefined) return;
+    if (param_data == undefined) return;
+    if (param_callback == undefined) return;
+
+    sendRequest(param_url, param_data, function(statusCode, responseJSON) {
+        if (statusCode == 200) {
+            param_callback(responseJSON);
+        } else {
+            // If error
+            alert(JSON.stringify(responseJSON));
+        }
+    }, "POST");
+}
+
+function update_request(param_url, param_data, param_callback, p_header) {
+	if (param_url == undefined) return;
+	if (param_data == undefined) return;
+	if (param_callback == undefined) return;
+
+    sendRequest(param_url, param_data, function(statusCode, responseJSON) {
+        if (statusCode == 200) {
+            param_callback(responseJSON);
+        } else {
+            // If error
+            alert(JSON.stringify(responseJSON));
+        }
+    }, "PUT", p_header);
+}
+
+function delete_request(param_url, param_id, param_callback, p_header_tag) {
+    if (param_url == undefined) return;
+    if (param_id == undefined) return;
+    if (param_callback == undefined) return;
+
+    sendRequest(param_url + "/" + param_id, {}, function(statusCode, responseJSON) {
+        if (statusCode == 200) {
+            param_callback(responseJSON);
+        } else {
+            // If error
+            alert(JSON.stringify(responseJSON));
+        }
+    }, "DELETE", p_header_tag);
+}
+
+function delete_request_param(p_url, p_param, p_callback, p_header_tag) {
+    if (p_url == undefined) return;
+    if (p_param == undefined) return;
+    if (p_callback == undefined) return;
+
+    sendRequest(p_url, p_param, function(statusCode, responseJSON) {
+        if (statusCode == 200) {
+            p_callback(responseJSON);
+        } else {
+            // If error
+            alert(JSON.stringify(responseJSON));
+        }
+    }, "DELETE", p_header_tag);
+}
+
+function add_request(param_url, param_data, param_callback, p_header_tag) {
+    if (param_url == undefined) return;
+    if (param_data == undefined) return;
+    if (param_callback == undefined) return;
+
+    sendRequest(param_url, param_data, function(statusCode, responseJSON) {
+        if (statusCode == 200) {
+            param_callback(responseJSON);
+        } else {
+            // If error
+            alert(JSON.stringify(responseJSON));
+        }
+    }, "POST", p_header_tag);
+}
+
+function redirect_page(p_page) {
+    window.location.href = p_page;
+}
+
+function goto_page_new_tab(p_page) {
+	if (p_page == undefined || p_page == "") return;
+
+	if (p_page.indexOf("http") == -1) {
+		p_page = "http://" + p_page;
+	}
+    window.open(p_page, '_blank');
+}
+
+function process_current_location(p_callback) {
+    if ("geolocation" in navigator) {//check geolocation available 
+        //try to get user current location using getCurrentPosition() method
+        navigator.geolocation.getCurrentPosition(function(position) {
+            //console.log("Found your location \nLat : "+position.coords.latitude+" \nLang :"+ position.coords.longitude);
+            var latitude = position.coords.latitude;
+            var longitude = position.coords.longitude;
+
+            p_callback(latitude, longitude);
+        });
+    } else {
+        console.log("Browser doesn't support geolocation!");
+    }
+}
+
+function get_current_location(param_callback) {
+    if ("geolocation" in navigator) {//check geolocation available 
+        //try to get user current location using getCurrentPosition() method
+        navigator.geolocation.getCurrentPosition(function(position) {
+            //console.log("Found your location \nLat : "+position.coords.latitude+" \nLang :"+ position.coords.longitude);
+            latitude = position.coords.latitude;
+            longitude = position.coords.longitude;
+
+            var GEOCODING = 'https://maps.googleapis.com/maps/api/geocode/json?latlng=' + position.coords.latitude + '%2C' + position.coords.longitude + '&language=en';
+
+            $.getJSON(GEOCODING).done(function(location) {
+                param_callback(location);
+
+                // how to use:
+                //$('#country').html(location.results[0].address_components[6].long_name);
+                //$('#state').html(location.results[0].address_components[5].long_name);
+                //$('#city').html(location.results[0].address_components[3].long_name);
+                //$('#address').html(location.results[0].formatted_address);
+                //$('#latitude').html(position.coords.latitude);
+                //$('#longitude').html(position.coords.longitude);
+            })
+        });
+    } else {
+        console.log("Browser doesn't support geolocation!");
+    }
+}
+
+
+function get_latitude_longitude_from_address(p_geocoder, p_address, p_callback) {
+    p_geocoder.geocode({'address': p_address}, function(results, status) {
+        if (status == google.maps.GeocoderStatus.OK) {
+          p_callback(results[0].geometry.location.lat(), results[0].geometry.location.lng());
+        } else {
+            console.log("unable to get_latitude_longitude_from_address Geocode for the following reason: " + status);
+        }
+    });
+}
+
+function show_message_popup(p_title, p_body) {
+    $("#message_popup_title").html(p_title);
+    $("#message_popup_body").html(p_body);
+    $("#message_popup").modal("show");
+}
+
+function get_url_param(p_key) {
+    var tempValue = "";
+
+    if (url('?' + p_key) != undefined && url('?' + p_key) != "") {
+        tempValue = url('?' + p_key);
+    }
+
+    return tempValue;
+}
+
+function get_property_id() {
+    return get_url_param("id");
+}
+
+function setup_param(param, dom_id, dom_tag, param_key_name) {
+    if (param == undefined) return;
+    if (dom_id == undefined) return;
+
+    var temp_obj = $("#" + dom_id);
+    if (dom_tag == undefined || dom_tag == "") dom_tag = temp_obj.prop('tagName').toLowerCase();
+
+    var old_value = temp_obj.attr("old_value");
+    var new_value = old_value;
+
+    if (dom_tag == "span") {
+        new_value = temp_obj.html();
+    } else {
+    	var dom_type = temp_obj.prop('type').toLowerCase();
+
+    	if (dom_type == "checkbox") {
+	        new_value = temp_obj.prop('checked').toString();
+	    } else {
+	    	if (dom_tag == "input" || dom_tag == "textarea") {
+		        new_value = temp_obj.val();
+		    }
+		}
+    }
+
+	if (old_value != new_value) {
+        var key = "";
+
+        if (param_key_name != undefined && param_key_name != "") {
+            key = param_key_name;
+        } else {
+            var key = dom_id.replace('id_span_', '');
+            key = dom_id.replace('id_', '');
+
+            //Convert true to 1, false to 0 for checkbox
+            if (dom_type == "checkbox") {
+                if (key.charAt(0) == "c") {
+                    key = key.substring(1);
+                    key = key.charAt(0).toLowerCase() + key.substring(1);
+                }
+            }
+        }
+
+        //Convert true to 1, false to 0 for checkbox
+        if (dom_type == "checkbox") {
+            if (new_value == "true" ) {
+                new_value = 1;
+            } else {
+                new_value = 0;
+            }
+        }
+
+        param[key] = new_value;
+    }
+}
+
+function check_user_info() {
+    return $.cookie("login_info");
+}
+
+function get_user_id() {
+    var user_info = check_user_info();
+    if (user_info == undefined) return -1;
+    return user_info.user.userId;
+}
+
+function get_id_token() {
+    var user_info = check_user_info();
+    if (user_info == undefined) return "";
+    return user_info.id_token;
+}
+
+function is_admin() {
+    // check admin is logged
+    if ($.cookie("login_info") == undefined || $.cookie("login_info") == "") return false;
+    if ($.cookie("login_info").user.admin) return true;
+
+    return false;
+}
+
+function is_logged() {
+    var user_info = check_user_info();
+    if (user_info == undefined || user_info == "") {
+        return false;
+    }
+    return true;
+}
+
+var us_currency_formatter = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2
+});
+
+$.views.helpers({
+    formatMoney: function(p_value) {
+        return us_currency_formatter.format(p_value); /* $2,500.00 */
+    }
+    ,getS3Url_home_image: function() {
+    	return 	s3_host_url_home_image;
+    }
+});
+

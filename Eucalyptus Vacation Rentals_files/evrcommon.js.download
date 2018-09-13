@@ -1,0 +1,67 @@
+$(document).ready(function(){
+  $("*").dblclick(function(e){
+    e.preventDefault();
+  });
+  
+  disable_inert_items();
+});
+
+$body = $("body");
+
+$(document).on({
+    ajaxStart: function() { $body.addClass("loading");    },
+     ajaxStop: function() { $body.removeClass("loading"); }    
+});
+
+$(document).on('show.the.modal', '.modal', function () {
+	//console.log("modal='" + this.id + "'");
+	var zIndex = Math.max.apply(null, Array.prototype.map.call(document.querySelectorAll('*'), function(el) {
+		return +el.style.zIndex;
+	})) + 1000;
+    $(this).css('z-index', zIndex);
+    setTimeout(function() {
+        $('.modal-backdrop').not('.modal-stack').css('z-index', zIndex - 1).addClass('modal-stack');
+    }, 0);
+});
+
+function findMaxValue(elements) {
+    var maxValue = undefined;
+	for (let i = 0; i < elements.length; i++) {
+		if(hasNumber(elements[i].value)){
+			var val = parseFloat(elements[i].value);
+			if (maxValue === undefined || maxValue < val) {
+				maxValue = val;
+			}
+		}
+	}
+    return maxValue;
+}
+
+function hasNumber(myString) {
+  return /\d/.test(myString);
+}
+
+//Added by FMA on 2018-08-24.  Uses "Inert" attribute to disable elements on a page.  Call this function after the doucment is ready.
+function disable_inert_items(){
+	if ( !('inert' in document.createElement('div')) ) {
+	  // JavaScript is needed to prevent focus from happening for keyboard users
+	  // Inert links
+	  var inertLinks = document.querySelectorAll('[inert] a');
+	  // Inert form elements
+	  var inertFormElements = document.querySelectorAll(' [inert] button, [inert] input, [inert] textarea, [inert] select');
+
+	  // Make the inert links really inert, also for keyboards
+	  var l = 0;
+	  while( l < inertLinks.length) {
+		inertLinks[l].setAttribute('tabindex','-1');
+		l++;
+	  }
+
+	  // Make the inert form elements really inert
+	  var f = 0;
+	  while( f < inertFormElements.length) {
+		inertFormElements[f].setAttribute('disabled','');
+		f++;
+	  }
+	}
+};
