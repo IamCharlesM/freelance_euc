@@ -1,0 +1,879 @@
+﻿function ellipsisFile(name,length){
+    // console.log(name);
+    // debugger
+    if(name.length>=30)
+    {
+        var n=name.split('.');
+        name = '...'+n[0].substr(n[0].length-26) + '.' + n[1];
+    }
+
+    return name;
+}
+
+(function($) {
+	
+	"use strict";
+
+    /*== modal ==*/
+	function reposition() {
+		var modal = $(this),
+			dialog = modal.find('.modal-dialog');
+		modal.css('display', 'block');
+		// Dividing by two centers the modal exactly, but dividing by three 
+		// or four works better for larger screens.
+		dialog.css("margin-top", Math.max(0, ($(window).height() - dialog.height()) / 2));
+	}
+	// Reposition when a modal is shown
+	$('.modal').on('show.bs.modal', reposition);
+	// Reposition when the window is resized
+	$(window).on('resize', function() {
+		$('.modal:visible').each(reposition);
+	});
+
+	/*$(document).on('click', '#apply-price-fields', function (e){
+		var container = $(this).parents('.select-price');
+		var min_price = container.find('[name=min_price]').val().replace('$','');
+		var max_price = container.find('[name=max_price]').val().replace('$','');
+		var list = container.find('ul');
+
+		min_price = parseFloat(min_price);
+		max_price = parseFloat(max_price);
+
+		var cont = true;
+        if(!isNaN(min_price) && !isNaN(max_price)){
+            if(min_price>max_price){
+                var temp = max_price;
+                max_price = min_price;
+                min_price = temp;
+            }
+        }else if(isNaN(min_price) && isNaN(max_price)) {
+            cont = false;
+            $('#reset-price-fields').trigger('click');
+        }
+
+        if(cont){
+            var priceVal = '$'+min_price + '-' + '$' + max_price;
+            if(isNaN(max_price)){
+                priceVal = '$'+min_price + '+';
+            }
+            if(isNaN(min_price)){
+                priceVal = '$'+max_price + '-';
+            }
+
+            container.find('input[type=hidden]').val(priceVal);
+            container.find('.select-value').html(priceVal);
+            hideSelectDropdown($(".select"));
+        }
+        e.stopPropagation();
+	});
+
+	function hideSelectDropdown(elem) {
+        elem.removeClass("active").find("ul").hide();
+    }
+
+    $(document).on('click', '#reset-price-fields', function (e){
+        var container = $(this).parents('.select-price');
+        var min_price = container.find('[name=min_price]').val('');
+        var max_price = container.find('[name=max_price]').val('');
+        hideSelectDropdown($(".select"));
+        e.stopPropagation();
+    });*/
+
+	$(document).on('keydown','[name=min_price],[name=max_price]',function (e) {
+        var valid = false;
+        // console.log(e.which);
+        // debugger;
+        if(e.which<32)
+            valid = true;
+        if((e.which >=48 && e.which <= 57 && e.key!=='$')  || (e.keyCode >= 96 && e.keyCode <= 105) ||
+            (e.keyCode >= 37 && e.keyCode <= 40) || e.which==8 || e.which==46 || (e.key == '$' && $(this).val().length == 0)){
+            valid = true;
+        }
+        if(!valid)
+            e.preventDefault();
+        return valid;
+    });
+
+    $(document).on('select-menu-open','.select-price',function () {
+        var val  =$(this).find('input[type=hidden]').val();
+        if(val.length>0){
+            var min = '';
+            var max = '';
+            var v = val.split('-');
+            if(v.length == 1){
+                v = val.split('+');
+                min = v[0].slice(1);
+            }else{
+                min = v[0].slice(1);
+                if(v[1].length == 0){
+                    max = min;
+                    min = '';
+                }else{
+                    max = v[1].slice(1);
+                }
+            }
+
+            $(this).find('[name=max_price]').val(max);
+            $(this).find('[name=min_price]').val(min);
+        }
+    });
+
+    $('.fd-reset').on('click',function () {
+        // debugger;
+       $('#feedback-page-form').find('.select-value').html('');
+       $('#feedback-page-form').find('.select-value').html('');
+        $('#feedback-page-form').find('.select-input').val('0');
+    });
+	
+	$(document).on('click', '.select', function(e) {
+		e.preventDefault();
+		// console.log('select');
+		var ul = $(this).find("ul");
+		var fd=$(this).hasClass("fd-select");
+		if ($(this).hasClass("active")) {
+            if(!$(this).hasClass('select-price')){
+                var target = $(e.target);
+                var tag=e.target.tagName;
+                if (tag=='LI' || tag=='I' || tag=='SPAN') {
+                    $(ul).find('li').removeClass("selected");
+
+                    if(tag!='LI')
+                        target = target.parents('li').addClass("selected");
+						
+
+                    target.addClass("selected");
+
+                    var value = target.html();
+                    // Set key to hidden input field
+                    var key = target.attr("value");
+					
+                    if(!$(e.target).attr('data-reset-select')){
+                        $(this).find(".select-input").val(key);
+                        if(fd)
+                        {
+                            var v=value.split('<span>(')[0];
+                            $(this).find(".select-value").html(v);
+                        }
+                        else
+                            $(this).find(".select-value").html(value);
+                    } else {
+                        $(this).find(".select-value").html($(e.target).attr("data-reset-select"));
+						$(this).find(".select-input").val("");
+                    }
+					
+					
+					if(this.id == "filter_click_sort_stars" || this.id == "filter_click_sort_distance" || 
+						this.id == "filter_click_sort_bath_rooms" || this.id == "filter_click_sort_bed_rooms" ||
+						this.id == "filter_click_sort_price"){
+						var prevVal = $(this).data('prevVal');
+						//Is the selected value = previously selected value?
+						if(prevVal != key){
+							//If not, the search results need to be updated.
+							filter_search();
+						}
+						
+					}
+                }
+
+                ul.hide();
+				//We need to store the fields previous data.
+				$(this).data('prevVal', key);
+                $(this).removeClass("active");
+			} else {
+                if ($(this).find('.select-value').is(e.target)){
+                    ul.hide();
+                    $(this).removeClass("active");
+                }
+            }
+		} else {
+            $('.select').not(this).each(function() {
+				$(this).removeClass("active").find("ul").hide();
+			});
+            $(this).trigger('select-menu-open');
+			ul.slideDown(300);
+            ul.parents('.select').addClass("active");
+		}
+	});
+	$(document).on('click', function(e) {
+        var t=e.target;
+        var target = $(t).closest(".select");
+        if (!target.length) {
+            $(".select").removeClass("active").find("ul").hide();
+        }
+	});
+	/*== Tab ==*/
+
+    (function () {
+        /* $(document).on('focus',".js-date-picker", function(e,aa) {
+            var id=$(this).parents('form').attr('id');
+
+            if(id!=='search-form') {
+                var h=findAvailableScreenHeightBelow(this);
+                // debugger;
+                // console.log('d')
+                if(h>255){
+                    initDatePicker($(this),'auto bottom');
+                }
+                else{
+                    initDatePicker($(this),'auto top');
+                }
+            }
+            else
+                initSearchDatePicker($(this));
+        }); */
+
+        $(document).on('click',".js-date-picker",function () {
+            var fId = $(this).parents('form').attr('id');
+            if (fId !== 'search-form') {
+                if($(this).is(':focus')){
+                    $(this).datepicker('show');
+                }
+            }
+        });
+
+        function initDatePicker(elem, orientation) {
+            var hideHandler = function (e) {
+                if (this.tagName == 'INPUT') {
+                    self.data('just-focus', true);
+                    elem.focus();
+                }
+            };
+
+            var eventOn = elem.datepicker({
+                autoclose: true,
+                orientation: orientation,
+                forceParse: false,
+                keyboardNavigation: false,
+                todayHighlight: true,
+            });
+
+            var self = elem;
+            eventOn.off('hide').on('hide', hideHandler).off('show').on('show', function (e) {
+                if (elem.data('just-focus')) {
+                    eventOn.off('hide');
+                    elem.datepicker('hide');
+                    eventOn.on('hide', hideHandler);
+                }
+
+                elem.data('just-focus', false);
+            });
+        }
+    })();
+
+	function findAvailableScreenHeightBelow(e){
+        var eTop = $(e).offset().top; //get the offset top of the element in document
+        var h=$(window).height();   //Height of screen
+        var s=$(window).scrollTop();    //height we have scrolled so far
+
+        var heightBelow=h+s - eTop;
+        // console.log(heightBelow); //position of the ele w.r.t window
+        return heightBelow;
+    }
+
+    /* (function () {
+        function initSearchDatePicker(elem,date) {
+            if(elem.data('datepicker'))
+        		return;
+
+        	if(!date)
+                date = new Date();
+
+            elem.datepicker({
+                autoclose: true,
+                startDate: date,
+                orientation: 'auto top',
+                forceParse: false,
+                keyboardNavigation: false,
+                todayHighlight: true,
+            });
+        }
+        window.initSearchDatePicker = initSearchDatePicker;
+	})(); */
+
+    $("#content").find("[id^='tab']").hide(); // Hide all content
+    $("#tabs li:first").attr("id","current"); // Activate the first tab
+    $("#content #tab1").fadeIn(); // Show first tab's content
+    
+    $('#tabs a').click(function(e) {
+        e.preventDefault();
+        if ($(this).closest("li").attr("id") == "current"){ //detection for current tab
+         return;       
+        }
+        else{             
+          $("#content").find("[id^='tab']").hide(); // Hide all content
+          $("#tabs li").attr("id",""); //Reset id's
+          $(this).parent().attr("id","current"); // Activate this
+          $('#' + $(this).attr('name')).fadeIn(); // Show content for the current tab
+        }
+    });
+
+	/*== rate-calendar ==*/
+	$('#rate-calendar').carousel({
+		pause: true,
+		interval: false
+	});
+
+	$(document).on('keypress','.btn.fileinput-button',function (e) {
+		if(e.which ==13)
+			$(this).find('input').trigger('click');
+    })
+
+	/*== attachment_upload ==*/
+	/* Comment out for now, already replaced with java
+	var brand = document.getElementById('upload-img');
+    brand.className = 'attachment_upload';
+    brand.onchange = function() {
+        document.getElementById('uploading-files').value = this.value.substring(12);
+    };
+    function readURL(input) {
+        if (input.files && input.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                $('.img-preview').attr('src', e.target.result);
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    };
+	$('#cancel').click(function(e){
+        $('#uploading-files').val("");
+        $('#imgpreview').attr("src","");
+    });
+    $("#upload-img").change(function() {
+        readURL(this);
+    });
+	*/
+
+    /*== ComboBox ==*/
+    /*
+	var no = new ComboBox('cb-hours');
+	var no = new ComboBox('cb-hours2');
+	*/
+
+})( jQuery );
+
+function imageDimensions(file,callback) {
+    var img = new Image();
+    img.src = window.URL.createObjectURL( file );
+    img.onload = function() {
+        var width = img.naturalWidth,
+            height = img.naturalHeight;
+
+        window.URL.revokeObjectURL( img.src );
+        callback({
+            width: width,
+            height: height
+        });
+    };
+}
+
+// show start or crop butons for uploading
+$(document).on('fileuploadadd','.js-fileupload',function (e,data) {
+    console.log(data);
+    var form = $(data.form);
+    var file = data.files[0];
+
+    setTimeout(function () {
+        form.find('.template-upload').each(function () {
+            var dFile = $(this).data('data').files[0];
+            var crop =$(this).find('.js-crop-btn');
+            var start = $(this).find('.start');
+            var name = $(this).find('.name');
+
+            if(dFile==file){
+                var form = $(this).parents('form');
+                var formID='';
+                if(form!=undefined)
+                    formID=form.attr('id');
+
+                console.log('id = '+formID);
+                name.parent().attr('title',file.name);
+                name.text(ellipsisFile(file.name));
+                imageDimensions(file,function (dimens) {
+                    if(dimens.width == 200 && dimens.height==200){
+                        crop.css('display','none');
+                        start.css('display','inline');
+                    }else{
+                        if(formID!='report-property-form') {
+                            crop.css('display', 'inline');
+                            start.css('display', 'none');
+                        }
+                        else{
+                            crop.css('display','none');
+                        }
+                    }
+                });
+                return;
+            }
+
+            // show crop button except report-property-form
+            var form = $(this).parents('form');
+            if (form.attr('id') != 'report-property-form') {
+                if (crop.attr("cropped") == "true") {
+                    crop.css('display', "none");
+                    start.css('display', "inline");
+                } else {
+                    start.css('display', 'none');
+                    crop.css('display', 'inline');
+                }
+            } else {
+                crop.css('display', 'none');
+                start.css('display', 'inline');
+            }
+        });
+    }, 230);
+});
+
+$(document).on('keydown','#manage-rates .close,#manage-reservations .close', function (e) {
+    if ($("this:focus") && (e.which == 9)) {
+        e.preventDefault();
+        var input=$(this).parents('.modal').find('input[type!=hidden]')[0];
+        // debugger;
+        if(input!=undefined)
+            input.focus();
+    }
+});
+
+$(document).on('keydown','.close-b', function (e) {
+    if ($("this:focus") && (e.which == 9)) {
+        e.preventDefault();
+        $(this).parents('.modal').find('.close')[0].focus();
+    }
+});
+
+function fixSelectScroll(){
+    $(document).find('.select-list').each(function(){
+        var list = $(this),
+            height = list.height(),
+            scrollHeight = list.get(0).scrollHeight;
+
+
+        list.bind('mousewheel', function(e, d) {
+            var sT=this.scrollTop;
+            // if($(e.target).parents('form').attr('id')=='edit-prof-form')
+            //     debugger;
+            var delta=e.originalEvent.wheelDelta;    // delta > 1 = scrollUp , delta < 0 = scrollDown
+            if((sT==0 && delta>0) || (sT>2360 && delta<0)) {
+                e.preventDefault();
+            }
+        });
+    });
+}
+
+
+var preview_width_upload_userprofile = 200;
+var preview_height_upload_userprofile = 200;
+var cropbox_width_upload_userprofile = 200;
+var cropbox_height_upload_userprofile = 200;
+
+var preview_width_upload_property_additional = 100;
+var preview_height_upload_property_additional = 64;
+// var cropbox_width_upload_property_additional = 786;
+var cropbox_width_upload_property_additional = 500;
+// var cropbox_height_upload_property_additional = 500;
+var cropbox_height_upload_property_additional = 318;
+
+
+var preview_width_upload_property_main = 100;
+var preview_height_upload_property_main = 103;
+var cropbox_width_upload_property_main = 315;
+var cropbox_height_upload_property_main = 325;
+
+var preview_width_upload_feedback = 100;
+var preview_height_upload_feedback = 75;
+var cropbox_width_upload_feedback = 200;
+var cropbox_height_upload_feedback = 150;
+
+var preview_width_upload_homepage = 100;
+var preview_height_upload_homepage = 100;
+var cropbox_width_upload_homepage = 460;
+var cropbox_height_upload_homepage = 460;
+
+//Image cropping
+(function () {
+    $(document).ready(function () {
+        var imageFormModal = null;
+        var imageForm = null;
+        var lastTemplate = null;
+        var imageFile = null;
+        var cropImageModal = $('#crop-box-modal');
+        var cropImagePreviewModal = $('#crop-box-preview-modal');
+        var croppedResultString = null;
+
+        var isImageCropped = false;
+        var isReset = false;
+        var cropbox = null;
+
+        function initCropbox() {
+            // cropbox = new Cropbox('#image-cropbox', {
+            //     variants: [
+            //         {
+            //             width: 200,
+            //             height: 200
+            //         }
+            //     ]
+            // });
+            //
+            // // the cropped event
+            // cropbox.getCb().addEventListener('cb:cropped', function(event){
+            //     // add image to the container
+            //     var img = $('#crop-preview-img');
+            //     img.attr('src', event.detail.data.image);
+            //
+            //     croppedResultString = cropbox.getData();
+            //     cropImageModal.modal('hide');
+            // });
+            //
+            // cropbox.getCb().addEventListener('cb:reset', function() {
+            //     cropFileImage(imageFile);
+            // });
+            //
+            // // the ready event
+            // cropbox.getCb().addEventListener('cb:ready', resetHandler);
+            //
+            // cropbox.getCb().addEventListener('cb:disabledCtrls', function(){
+            //     setControls(true);
+            // });
+            // cropbox.getCb().addEventListener('cb:enabledCtrls', function(){
+            //     setControls(false);
+            // });
+            //
+            // cropbox.getMembrane().addEventListener('wheel', function(event){
+            //     if (event.deltaY < 0) {
+            //         cropbox.scale(1.01);
+            //     } else {
+            //         cropbox.scale(0.99);
+            //     }
+            //
+            //     event.preventDefault();
+            // });
+        }
+
+        cropImagePreviewModal.on('hidden.bs.modal',function () {
+            if(!isReset){
+                var form=localStorage.getItem('feedback');
+                var elmt=$('.fileinput-button');
+                if(form==1)
+                {
+                    elmt=$('#feedback-form .fileinput-button')
+                    localStorage.setItem('feedback','0');
+                }
+                elmt.focus();
+            }
+
+            isReset = false;
+        });
+
+        cropImagePreviewModal.on('shown.bs.modal',function () {
+            isReset = false;
+        });
+
+        $(document).on('#feedback-form .js-crop-btn','click',function(){
+           localStorage.setItem('feedback','1');
+           // console.log('working');
+        });
+
+        cropImageModal.on('hidden.bs.modal',function () {
+            // console.log(croppedResultString);
+            if(!croppedResultString || croppedResultString.length==0){
+                var form=localStorage.getItem('feedback');
+                var elmt=$('.fileinput-button');
+                if(form==1)
+                {
+                    elmt=$('#feedback-form .fileinput-button')
+                    localStorage.setItem('feedback','0');
+                }
+                elmt.focus();
+            }else{
+                cropImagePreviewModal.modal('show');
+            }
+        });
+
+        cropImageModal.on('shown.bs.modal',function () {
+            croppedResultString = null;
+        });
+
+
+        setTimeout(function(){
+            fixSelectScroll();
+        },2000);
+
+        $(document).on('click','.js-crop-btn',function () {
+            croppedResultString = null;
+            initCropbox();
+            lastTemplate = $(this).parents('.template-upload');
+            imageFormModal = $(this).parents('.modal');
+            imageForm = $(this).parents('form');
+            // imageFormModal.modal('hide');
+            imageFile = lastTemplate.data('data').files[0];
+            cropFileImage(imageFile);
+        });
+
+        $(document).on('click','.js-cropbox-scalein',function () {
+            cropbox.scale(cropbox.getData().scaleX+0.05,cropbox.getData().scaleY+0.05);
+        });
+
+        $(document).on('keypress','.js-cropbox-scalein',function (e) {
+            if(e.which==13)
+                cropbox.scale(cropbox.getData().scaleX+0.05,cropbox.getData().scaleY+0.05);
+        });
+
+        // the reset event
+        function resetHandler(){
+            isReset = true;
+            cropImagePreviewModal.find('.js-preview-container').html('');
+            cropImagePreviewModal.modal('hide');
+
+            cropbox.reset();
+            setCropSize();
+            cropImageModal.modal('show');
+        };
+
+        /*
+        $(document).on('click','.js-crop-finalize',function () {
+            var myCanvas = lastTemplate.find('canvas')[0];
+            var ctx = myCanvas.getContext('2d');
+            var img = new Image;
+            img.onload = function() {
+                ctx.drawImage(img, 0, 0, img.width, img.height,     // source rectangle
+                    0, 0, myCanvas.width, myCanvas.height); // destination rectangle
+                cropImagePreviewModal.modal('hide');
+                lastTemplate.find('.js-crop-btn').css('display','none');
+                lastTemplate.find('.start').css('display','inline');
+            };
+
+            img.src = croppedResultString;
+        });
+        */
+
+        // update cropped image
+        $(document).on('click','.js-crop-finalize',function () {
+            var tempFormId = imageForm.attr("id");
+            var myCanvas = lastTemplate.find('canvas')[0];
+            var ctx = myCanvas.getContext('2d');
+            var img = new Image;
+
+            var target_width_height;
+
+            if (tempFormId == "edit-prof-form") {
+                myCanvas.width  = preview_width_upload_userprofile;
+                myCanvas.height = preview_height_upload_userprofile;
+
+                target_width_height = {width:cropbox_width_upload_userprofile, height:cropbox_height_upload_userprofile}
+            } else if (tempFormId == "upload_property_main") {
+                myCanvas.width  = preview_width_upload_property_main;
+                myCanvas.height = preview_height_upload_property_main;
+
+                target_width_height = {width:cropbox_width_upload_property_main, height:cropbox_height_upload_property_main}
+            } else if (tempFormId == "upload_property_additional") {
+                myCanvas.width  = preview_width_upload_property_additional;
+                myCanvas.height = preview_height_upload_property_additional;
+
+                target_width_height = {width:cropbox_width_upload_property_additional, height:cropbox_height_upload_property_additional}
+            } else if (tempFormId == "feedback-form") {
+            	myCanvas.width  = preview_width_upload_feedback;
+                myCanvas.height = preview_height_upload_feedback;
+
+                target_width_height = {width:cropbox_width_upload_feedback, height:cropbox_height_upload_feedback}
+            } else if (tempFormId == "homepage_form") {
+            	myCanvas.width  = preview_width_upload_homepage;
+                myCanvas.height = preview_height_upload_homepage;
+
+                target_width_height = {width:cropbox_width_upload_homepage, height:cropbox_height_upload_homepage}
+            }
+
+            img.onload = function() {
+                ctx.drawImage(img, 0, 0, img.width, img.height,      			// source rectangle
+                                   0, 0, myCanvas.width, myCanvas.height);     	// destination rectangle
+                cropImagePreviewModal.modal('hide');
+                lastTemplate.find('.js-crop-btn').css('display','none');
+                lastTemplate.find('.js-crop-btn').attr('cropped','true');
+
+                lastTemplate.find('.start').css('display','inline');
+            };
+            img.src = croppedResultString;
+
+            var cropbox_canvas = cropbox.getCroppedCanvas(target_width_height);
+            // reset data.files[0] = cropped blob, set image type with jpeg, default is image/png
+            cropbox_canvas.toBlob(function(blob) {
+		    	var data = lastTemplate.data('data');
+		    	var file = data.files[0];
+		    	if (!blob.name) {
+                    if (file.type === blob.type) {
+                        blob.name = file.name;
+                    } else if (file.name) {
+                        blob.name = file.name.replace(
+                            /\.\w+$/,
+                            '.' + blob.type.substr(6)
+                        );
+                    }
+                }
+		    	data.files[0] = blob;
+
+                if (tempFormId == "edit-prof-form") {
+                    $("#id_btn_start_userprofile").prop("disabled", false);
+                } else if (tempFormId == "upload_property_main") {
+                    $("#id_btn_start_property_main").prop("disabled", false);
+                } else if (tempFormId == "upload_property_additional") {
+                    $("#id_btn_start_property_additional").prop("disabled", false);
+                } else if (tempFormId == "feedback-form") {
+                    $("#id_btn_start_feedback").prop("disabled", false);
+                } else if (tempFormId == "homepage_form") {
+                    $("#id_btn_start_homepage").prop("disabled", false);
+                }
+		    }, "image/jpeg");
+        });
+
+        $(document).on('click','.js-cropbox-scaleout',function () {
+            console.log(cropbox);
+            cropbox.scale(cropbox.getData().scaleX-0.05,cropbox.getData().scaleY-0.05);
+        });
+        $(document).on('keypress','.js-cropbox-scaleout',function (e) {
+            // console.log('eed');
+            if(e.which==13)
+                cropbox.scale(cropbox.getData().scaleX-0.05,cropbox.getData().scaleY-0.05);
+        });
+
+        function cropFileImage(file) {
+            if(cropbox){
+                cropbox.destroy();
+            }
+            var fileReader = new FileReader();
+            fileReader.readAsDataURL(file);
+            fileReader.addEventListener('load', function(event){
+                //cropbox.load(event.target.result);
+                var img = new Image();
+                img.onload = function () {
+                    setTimeout(function(){
+                        var canvas = $('#cropping-image')[0];
+                        var modalId=imageFormModal.attr('id');
+                        // debugger;
+                        if(modalId==='upload-images' && imageForm.hasClass('ext-imgs')){
+                            //canvas.width = 900;      // set canvas size big enough for the image
+                            canvas.width = 1000;      // set canvas size big enough for the image
+                            cropImageModal.addClass('extra-imgs');
+                        }
+                        else{
+                            cropImageModal.removeClass('extra-imgs');
+                            canvas.width = 700;         // set canvas size big enough for the image
+                        }
+                        canvas.height = 600;
+                        var ctx = canvas.getContext("2d");
+
+                        var wrh = img.width / img.height;
+                        var newWidth = canvas.width;
+                        var newHeight = newWidth / wrh;
+                        if (newHeight > canvas.height) {
+                            newHeight = canvas.height;
+                            newWidth = newHeight * wrh;
+                        }
+
+                        // calculate distance to left, top, so the image will be shown in the center position
+                        var toLeft = (canvas.width - newWidth) / 2
+                        var toTop = (canvas.height - newHeight) / 2
+
+                        ctx.drawImage(img, toLeft, toTop, newWidth, newHeight);
+
+                        cropbox = new Cropper(canvas,{
+                            viewMode: 0,
+                            cropBoxResizable: false,
+                            toggleDragModeOnDblclick: false,
+                            dragMode: 'move'
+                            //,aspectRatio: 800/356 // add ratio
+                            ,ready: function () {
+                                setCropSize();
+                            }
+                        });
+
+                        window.cropBox = cropbox;
+
+                        cropImageModal.modal('show');
+                    },250);
+
+                };
+                img.src = fileReader.result;
+            });
+        }
+
+        function setCropSize() {
+            var modalId = imageFormModal.attr("id");
+
+            if (modalId === "edit-profile") {
+            	w = cropbox_width_upload_userprofile;
+                h = cropbox_height_upload_userprofile;
+                $("#crop-preview-img").attr("source_id", "upload_userprofile");
+            } else if (modalId ==="upload-images") {
+                if (imageForm.hasClass("ext-imgs")) {
+                    // upload_property_additional 
+                    w = cropbox_width_upload_property_additional;
+                    h = cropbox_height_upload_property_additional;
+                    $("#crop-preview-img").attr("source_id", "upload_property_additional");
+                } else {
+                    // upload_property_main
+                    w = cropbox_width_upload_property_main;
+                    h = cropbox_height_upload_property_main;
+                    $("#crop-preview-img").attr("source_id", "upload_property_main");
+                }
+            } else if (modalId === "feedback-popup") {
+                w = cropbox_width_upload_feedback;
+                h = cropbox_height_upload_feedback;
+                $("#crop-preview-img").attr("source_id", "upload_feedback");
+            } else if (modalId === "homepage_popup") {
+                w = cropbox_width_upload_homepage;
+                h = cropbox_height_upload_homepage;
+                $("#crop-preview-img").attr("source_id", "upload_homepage");
+            }
+
+            $("#crop-preview-img").attr("source_width", w);
+            $("#crop-preview-img").attr("source_height", h);
+
+            // calculate dynamic left and top, so the crop box will be shown in the center position
+            var oldLeft = cropbox.getCropBoxData().left;
+            var dynamicLeft = oldLeft + (cropbox.getCropBoxData().width / 2 - w / 2);
+            var oldTop = cropbox.getCropBoxData().top;
+            var dynamicTop = oldTop + (cropbox.getCropBoxData().height / 2 - h / 2);
+
+            cropbox.setCropBoxData({
+                left: dynamicLeft,
+                top: dynamicTop,
+                width: w,
+                height: h
+            });
+        }
+
+        // reset
+        $(document).on('click','.js-reset-crop',function () {
+            resetHandler();
+        });
+
+        /*$(document).on('click','.js-start-cropping',function () {
+            var img = $('#crop-preview-img');
+            var target_width_height = {width:img.attr("source_width"), height:img.attr("source_height")}
+            img.attr('src', cropbox.getCroppedCanvas(target_width_height).toDataURL('image/jpeg'));
+
+            croppedResultString = cropbox.getCroppedCanvas(target_width_height).toDataURL('image/jpeg');
+            cropImageModal.modal('hide');
+        });*/
+
+
+/*TO  MAKE EDGES AS SAME COLOR AS BACKGROUND*/
+$(document).on('click','.js-start-cropping',function () {
+           var img = $('#crop-preview-img');
+           var target_width_height = {width:img.attr("source_width"), height:img.attr("source_height")}
+           img.attr('src', cropbox.getCroppedCanvas('target_width_height',{fillColor: '#fff',}).toDataURL('image/jpeg'));
+
+           croppedResultString = cropbox.getCroppedCanvas('target_width_height',{fillColor: '#fff',}).toDataURL('image/jpeg');
+           cropImageModal.modal('hide');
+       });
+
+
+
+        // the disabled/enabled event
+        function setControls(isDisabled){
+            $('.js-cropbox-scalein').prop('disabled', isDisabled);
+            $('.js-cropbox-scaleout').prop('disabled', isDisabled);
+            $('.js-start-cropping').prop('disabled', isDisabled);
+        };
+
+        setControls(false);
+    })
+})();

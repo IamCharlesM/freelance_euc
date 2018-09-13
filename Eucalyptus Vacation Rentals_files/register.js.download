@@ -1,0 +1,115 @@
+$(document).ready(function(){
+    // setInterval(enableRegisterSubmit,1000);
+
+    /*$(document).on('submit','#register-form',function(e){
+        e.preventDefault();
+        $(this).valid;      //to run validations
+        if(checkValidity($(this)))
+        {
+            //entered data is valid
+        }
+        else{
+            e.stopPropagation();
+        }
+    });*/
+
+    $(document).on('keypress','#register-form input[name=confirm_password]',function () {
+        var f=$('#register-form input[name=confirm_password]');
+        // console.log('Length='+$(this).length);
+        if($(f).val().length==$(this).length)
+            $(f).valid();
+    });
+});
+
+$(document).on('file-loaded',function (e,file,elmnt) {
+    if(file!=='owner/register.html')
+        return;
+    $('#register-form').validate({
+        rules:{
+            first_name: 'required',
+            last_name: 'required',
+            email:{
+                required: true,
+                validateEmail: true
+            },
+            confirm_email: {
+                required: true,
+                validateEmail: true,
+                registerEmail: true
+            },
+            password: {
+                required: true,
+                minlength: 8,
+                validatePassword: true
+            },
+            confirm_password: {
+                required: true,
+                minlength: 8,
+                validatePassword: true,
+                registerPass: true
+                // equalTo: '#register-password'
+            },
+			 referralEmail:{
+                validateEmail: true,
+				validateReferralEmail: true
+            },
+        },
+        messages:{
+            first_name: 'Please enter your first-name',
+            last_name: 'Please enter your last-name',
+            email:{
+                required: 'Email is required',
+            },
+            confirm_email: {
+                required: 'Email is required',
+                // equalTo: 'Confirm-email don\'t matches email'
+            },
+            password: {
+                required: 'Password is required',
+                minlength: 'Password should be at-least 8-characters long'
+            },
+            confirm_password: {
+                required: 'Confirm-Password is required',
+                minlength: 'Confirm-Password should be at-least 8-characters long',
+                // equalTo: 'Confirm-password don\'t matches above entered Password'
+            },
+        },
+        errorElement: "em",
+        errorPlacement: function ( error, element ) {
+            // Add the `help-block` class to the error element
+            var name=element.attr('name');
+            if(name!='read_terms') {
+                error.addClass("help-block");
+
+                // Add `has-feedback` class to the parent div.form-group
+                // in order to add icons to inputs
+                element.parents(".form-group").addClass("has-feedback");
+
+                if (element.prop("type") === "checkbox") {
+                    error.insertAfter(element.parent("label"));
+                } else {
+                    error.insertAfter(element);
+                }
+
+                // Add the span element, if doesn't exists, and apply the icon classes to it.
+                if (!element.next("span")[0]) {
+                    $("<span class='red glyphicon glyphicon-remove form-control-feedback'></span>").insertAfter(element);
+                }
+            }
+        },
+        success: function ( label, element ) {
+            // Add the span element, if doesn't exists, and apply the icon classes to it.
+            if ( !$( element ).next( "span" )[ 0 ] ) {
+                $( "<span class='green glyphicon glyphicon-ok form-control-feedback'></span>" ).insertAfter( $( element ) );
+            }
+        },
+        highlight: function ( element, errorClass, validClass ) {
+            $( element ).addClass( "has-error red-border" ).removeClass( "has-success green-border" );
+            $( element ).next( "span" ).addClass( "glyphicon-remove" ).removeClass( "glyphicon-ok" );
+        },
+        unhighlight: function ( element, errorClass, validClass ) {
+            $( element ).addClass( "has-success green-border" ).removeClass( "has-error red-border" );
+            $( element ).next( "span" ).addClass( "glyphicon-ok" ).removeClass( "glyphicon-remove" );
+        }
+    });
+});

@@ -1,0 +1,120 @@
+var formatDate = function(date){
+    var a = moment(date,'MM/DD/YYYY');
+    if(a.isValid()){
+        return a.format('MM/DD/YYYY');
+    }else{
+        return false;
+    }
+};
+
+var Validator = {
+    required_if_present: function (elem) {
+        var parent = elem.parents('form');
+        var other = elem.parents('form').find(elem.attr('data-present'));
+        if(other.val().length!=0 && elem.val().length==0){
+            return false;
+        }
+        return true;
+    },
+    required: function(elem){
+        var val = elem.val();
+        if(elem.attr('type') == 'radio'){
+            val = $(elem.parents('form')[0]).find('input[name='+elem.attr('name')+']:checked').val();
+        }
+        
+        return val!=null && val.length != 0;
+    },
+    minLength: function (elem){
+        var val = elem.val();
+        return val.length > 5;
+    },
+    formatDate: function (elem) {
+        var date = elem.val();
+        var d = formatDate(date);
+        if(d){
+            elem.val(d);
+            d = true;
+        }
+        return d;
+    },
+    date_checking_arrival: function(elem){
+        var parent = elem.parents('.js-submit-form');
+        var arrive_date = parent.find('[name=arrive_date]').val();
+        var departure_date = parent.find('[name=departure_date]').val();
+
+
+        if(arrive_date!=''){
+            var arriveDateObj = moment(arrive_date,'MM/DD/YYYY');
+            var currentDate = moment().startOf('day');
+            if(arriveDateObj.diff(currentDate,'minute') < 0){
+                return false;
+            }
+
+            if(departure_date!=''){
+                var departureDateObj = moment(departure_date,'MM/DD/YYYY');
+
+                if(arriveDateObj.diff(departureDateObj,'minute')>0){
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    },
+    date_checking_departure: function(elem){
+        var parent = elem.parents('.js-submit-form');
+        var arrive_date = parent.find('[name=arrive_date]').val();
+        var departure_date = parent.find('[name=departure_date]').val();
+
+        if(departure_date!='' && arrive_date!=''){
+            var departureDateObj = moment(departure_date,'MM/DD/YYYY');
+            
+            if(arrive_date!=''){
+                var arriveDateObj = moment(arrive_date,'MM/DD/YYYY');
+                if(departureDateObj.diff(arriveDateObj,'minute')<0){
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    },
+    validate: function(form){
+        var toValidate = form.find('[data-inp-val=true]');
+        var isVal = true;
+        var val = [];
+        $(toValidate).each(function(){
+            var a = Validator.validateInput($(this));
+            val.push(a);
+            isVal = a.status && isVal;
+        });
+        
+        return {isVal: isVal, values: val};
+    },
+    validateInput: function(inp){
+        var rules = inp.attr('data-val-rules');
+        var toRet = {};
+        var isVal = true;
+        if(rules){
+            rules = rules.split(';');
+            for(var index in rules){
+                var rulename = rules[index];
+                if(Validator[rulename]){
+                    toRet[rulename] = Validator[rulename](inp);
+                    isVal = toRet[rulename] && isVal;
+                } 
+                else {
+                    console.log('No validation rule found with name \'' + rulename + '\'');
+                }
+            }
+        }
+        
+        var toRet = {status: isVal, detail: toRet};
+        var toNotify = inp.attr('name');
+        var notifyTo = inp.parent().find('[data-val-for='+toNotify+']');
+        if(notifyTo){
+            notifyTo.trigger('validation-check-complete', [notifyTo, toRet, inp]);
+        }
+        return toRet;
+    }
+}

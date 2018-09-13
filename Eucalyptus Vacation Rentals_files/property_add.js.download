@@ -1,0 +1,196 @@
+
+function show_add_property() {
+    if (!is_logged()) {
+        showLoginForgot({
+            showLogin: true
+        });
+        event.stopPropagation();
+    } else {
+        redirect_page("manage-properties.html?create_listing=1");
+    }    
+}
+
+function clear_add_listing() {
+    $("#outer_region").hide();
+    $("#create-listing-form")[0].reset();
+    $("span[name=property_type]").html("");
+    $("span[name=bedrooms]").html("");
+    $("span[name=baths]").html("");
+    $("span[name=half_baths]").html("");
+    $("span[name=capacity]").html("");
+	clearValidations($('#create-listing-form')[0]);
+}
+
+function autocomplete_func_add_listing() {
+    $("#create_listing_address1").val($("#create_listing_address1").val().split(",")[0]);
+    $("#outer_region").show();
+}
+
+function on_property_add() {
+    var obj_address1 = $("#create_listing_address1");
+
+    var param = {
+        "address1": $("#create_listing_address1").val()
+        ,"address2": $("#create_listing_address2").val()
+        ,"city": $("#create_listing_city").val()
+        ,"state": $("#create_listing_state").val()
+        ,"postalCode": $("#create_listing_postalCode").val()
+        ,"country": $("#create_listing_country").val()
+        ,"propertyTagLine": $("#create_listing_propertyTagLine").val()
+        ,"propertyType": $("#create_listing_propertyType").val()
+        ,"bedRooms": $("#create_listing_bedRooms").val()
+        ,"fullBaths": $("#create_listing_fullBaths").val()
+        ,"halfBaths": $("#create_listing_halfBaths").val()
+        ,"maxCapacity": $("#create_listing_maxCapacity").val()
+        ,"latitude": obj_address1.attr("latitude")
+        ,"longitude": obj_address1.attr("longitude")
+    }
+	show_blockui();
+    try{
+		add_request(properties_service_url, param, function(data) {
+			$('#create-listing').modal('hide');
+			show_message_popup("Property Successfully Added", "A new property has been sucessfully added.");
+			clear_add_listing();
+			
+			get_properties();
+
+		}, true);
+	}
+	catch(err) {
+		show_message_popup("Error", "Unable to add a property at this time.  Please contact technical support.");
+	}
+	finally{
+		hide_blockui();
+	}
+}
+
+// When document is ready
+$(function() {
+    $("#id_create_listing2").on("click", function(e) {
+        var user_info = check_user_info();
+
+        if (user_info == undefined) {
+            show_message_popup("", "Please sign in first.");
+        } else {
+            $("#id_create_listing2").attr("data-target", "#create-listing");
+            $("#id_create_listing2").attr("data-toggle", "modal");
+        }
+    });
+});
+
+/* Deprecated by FMA on 2018-08-18
+// take atction after common pages loaded
+$(document).on("file-loaded", function(e, file, elmnt) {
+    if (file == "header.html") {
+		var path = window.location.pathname;
+		var page = path.split("/").pop();
+		console.log( page );
+        // check current page is manage-properties.html or not, if then hide create listing
+        if ($(location).attr('pathname').indexOf("manage-properties.html") != -1) {
+            $("#id_create_listing").hide();
+        }
+    } else if (file == "owner/create-listing.html") {
+        $('#create-listing-form').submit(function(e){
+            e.preventDefault();
+            $('#create-listing-form').find('.select-value').each(function(){
+                selectError(this);
+            });
+
+            $(this).valid;      //to run validations
+            if(checkValidity($(this)))
+            {
+                on_property_add();
+            }
+            else{
+                //form is invalid
+            }
+        });
+    }
+}); */
+
+// take atction after common pages loaded
+$(document).on("file-loaded", function(e, file, elmnt) {
+	/*$('#create-listing-form').find('.select-value').each(function(){
+		selectError(this);
+	});*/
+	
+    if (file == "header.html") {
+		var path = window.location.pathname;
+		var page = path.split("/").pop();
+		console.log( page );
+        // check current page is manage-properties.html or not, if then hide create listing
+        if ($(location).attr('pathname').indexOf("manage-properties.html") != -1) {
+            $("#id_create_listing").hide();
+        }
+    } else if (file == "owner/create-listing.html") {
+        $('#create-listing-form').submit(function(e){
+            e.preventDefault();
+			//try {
+				$('#create-listing-form').find('.select-value').each(function(){
+					selectError(this);
+				});
+
+				$(this).valid;      //to run validations
+				if(checkValidity($(this)))
+				{
+					//entered data is valid
+					//show_blockui();
+					on_property_add();
+				}
+				else{
+					//form is invalid
+				}
+			/*} catch(err) {
+				show_message_popup("Error", "Error Creating Listing: " +  + err.message);
+			} finally{
+				hide_blockui();
+			}*/
+        });
+    }
+});
+
+/*$(document).ready(function(){
+    $(document).on('click','#create-listing-form .select',function(){
+		selectError($(this).find('.select-value'));
+    });
+
+     $('#create-listing-form').submit(function(e){
+         e.preventDefault();
+        //alert('ok');
+        // debugger;
+    
+         $('#create-listing-form').find('.select-value').each(function(){
+             selectError(this);
+         });
+         //
+         $(this).valid;      //to run validations
+         if(checkValidity($(this)))
+         {
+         //     entered data is valid
+	 		on_property_add();
+         }
+         else{
+             // form is invalid
+         }
+     });
+});*/
+
+/*function submitFunction() {
+
+    $('#create-listing-form').find('.select-value').each(function(){
+        selectError(this);
+    });
+    // alert($('#create-listing-form').find('.has-error').length);
+    if($('#create-listing-form').find('.has-error').length == 0)
+    {
+        //     entered data is valid
+        on_property_add();
+        $('#create-listing-form').submit();
+    }
+    else{
+        // form is invalid
+        return;
+    }
+}*/
+
+

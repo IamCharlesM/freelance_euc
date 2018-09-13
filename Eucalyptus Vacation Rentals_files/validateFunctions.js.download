@@ -1,0 +1,391 @@
+jQuery.validator.addMethod("checkAddress", function(value,element){
+    var elem = $($(this)[0].currentElements[0]);
+    var parent = elem.parents('form');
+    var l=parent.find('.locality').val().length+
+        parent.find('.postal_code').val().length+
+        parent.find('.country').val().length+
+        parent.find('.administrative_area_level_1').val().length;
+
+    //Revalidate after 1 sec
+    //As it takes some time to get Address using google API
+
+    (function () {
+        var p = parent,len=l;
+        setTimeout(function(){
+            p.find('.autocomplete').valid();
+            // callback();
+        },500);
+    })();
+
+    // console.log(!$('.autocomplete').hasClass('has-error') && !$('.autocomplete').hasClass('has-success'));
+    if(!$(element).hasClass('has-error') && !$(element).hasClass('has-success'))
+    {
+        return true;
+    }
+    else
+        return l>0 && !(value.length===0);
+},'Please select an address from list.');
+
+jQuery.validator.addMethod("validatePhone",function (value){
+    return validatePhone(value);
+},'Entered phone number is invalid.');
+
+
+jQuery.validator.addMethod("requiredFdDate",function (value){
+
+},'Arrival Date is required.');
+
+$(document).on('keydown','.number-only',function (e) {
+    if(e.which!=9){
+        // console.log(e.which);
+        if(!((e.which>=48 && e.which<=57)  || (e.keyCode >= 96 && e.keyCode <= 105) || (e.keyCode >= 37 && e.keyCode <= 40) || e.which==8 || e.which==46))
+            e.preventDefault();
+    }
+});
+
+jQuery.validator.addMethod("validatePhoneOptional",function (value,element){
+    if (this.optional(element)) {
+        return true;
+    }
+    else
+        return validatePhone(value);
+},'Entered phone number is invalid.');
+
+
+jQuery.validator.addMethod("registerPass",function (value,element){
+    // debugger;
+    var pass=$('#register-form').find('input[name=password]').val();
+    if (pass.length>0&&value==pass) {
+        return true;
+    }
+    else
+        return false;
+},'Password doesn\'t match the password entered above');
+
+
+jQuery.validator.addMethod("registerEmail",function (value,element){
+    // debugger;
+    var email=$('#register-form').find('input[name=email]').val();
+    if (value==email) {
+        return true;
+    }
+    else
+        return false;
+},'Email address doesn\'t match the email address entered above');
+
+jQuery.validator.addMethod("validateReferralEmail",function (value,element){
+    // debugger;
+    var email=$('#register-form').find('input[name=email]').val();
+	var email2=$('#register-form').find('input[name=confirm_email]').val();
+    if (email.length==0||email2.length==0||value!=email&&value!=email2) {
+        return true;
+    }
+    else
+        return false;
+},'Email address is invalid.  Please enter the address of the owner who referred you');
+
+jQuery.validator.addMethod("editPPass",function (value,element){
+    // debugger;
+    var pass=$('#edit-prof-form').find('input[name=password]').val();
+    if (pass.length>0&&value==pass) {
+        return true;
+    }
+    else
+        return false;
+},'Password doesn\'t match the password entered above');
+
+
+jQuery.validator.addMethod("editPEmail",function (value,element){
+    // debugger;
+    var email=$('#edit-prof-form').find('input[name=email]').val();
+    if (email.length>0&&value==email) {
+        return true;
+    }
+    else
+        return false;
+},'Confirm-email don\'t matches email');
+
+
+// jQuery.validator.addMethod("validateZip",function (value){
+//     return validateZip(value);
+// },'Entered zip code is invalid.');
+
+jQuery.validator.addMethod("validatePassword",function (value){
+    // console.log(value);
+    var regularExpression = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])[ -~]{8,}$/g;
+    return regularExpression.test(value);
+},'Your password doesn\'t match the criteria. It should contain at-least 1 digit, 1 lowercase letter and 1 uppercase letter and should be at-least 8-characters long.');
+
+jQuery.validator.addMethod("validateEmail",function (value){
+    if(value.length==0)
+        return true;
+    return validateEmail(value);
+},'Entered email is invalid.');
+
+jQuery.validator.addMethod("feedbackMsg",function (value){
+    var val=$('#fd-list').parents('.select').find('.select-value');
+    var l=$(val).text().length;
+
+    if(value.length>0 && l==0)
+        selectErrorRemove(val);
+    else
+    {
+        selectFeedback(val);
+    }
+    return (l>0 || value.length>0);
+},'Please rate your experience or send us a message.');
+
+jQuery.validator.addMethod("validateReview",function (value){
+    var r2=$('#feedback-form').find('textarea[name=r2]');
+    var r3=$('#feedback-form').find('textarea[name=r3]');
+
+    var l2=$(r2).val().length;
+    var l3=$(r3).val().length;
+    return (l2+l3)>0;
+},'You must provide	Internal Feedback (middle textbox) or Public Feedback (last textbox).');
+
+jQuery.validator.addMethod('validate_arriveD',function(value){
+    var entered = moment(value,'MM/DD/YYYY');
+    var d1=entered.diff(moment(),'days');
+    console.log('dl  '+entered);
+    var valid = (d1>=0);
+    console.log(valid);
+    return valid;
+},'Entered date is invalid.');
+
+function validatePhone(value){
+    var regularExpression = /^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/;
+    return regularExpression.test(value);
+}
+
+function validateEmail(value){
+    var re = /^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
+    return re.test(value);
+}
+
+function clearValidations(form)
+{
+    form.reset();
+    $(form).find( ".form-control" ).removeClass( "has-success green-border has-error red-border" );
+    $(form).find( ".glyphicon-ok" ).remove();
+    $(form).find( ".glyphicon-remove" ).remove();
+    $(form).find('.help-block').remove();
+}
+
+jQuery.fn.tagName = function() {
+    return this.prop("tagName").toLowerCase();
+};
+
+function selectError(elemnt) {
+    if ($(elemnt).text().length == 0) {
+        $(elemnt).parents('a').addClass('has-error red-border');
+        $(elemnt).parents('a').parent().find('span.glyphicon').remove();
+        $(elemnt).parents('a').parent().find('em.error').remove();
+        $("<span class='select-glyph red glyphicon glyphicon-remove form-control-feedback'></span>").insertAfter($(elemnt).parents('a'));
+        $(elemnt).parents('a').after("<em class='error help-block'>This field is required.</em>");
+
+    }
+    else {
+        $(elemnt).parents('a').removeClass('has-error red-border');
+        $(elemnt).parents('a').addClass('has-success green-border');
+        $(elemnt).parents('a').parent().find('span.glyphicon').remove();
+        $(elemnt).parents('a').parent().find('em.error').remove();
+        $("<span class='select-glyph green glyphicon form-control-feedback glyphicon-ok'></span>").insertAfter($(elemnt).parents('a'));
+    }
+}
+
+function selectSearchError(elemnt) {
+    var text=$(elemnt).text();
+    text=text.trim();
+    // console.log(text);
+    if (text.includes('Distance') || !text.include(' Guests')) {
+        console.log('error');
+        $(elemnt).parents('a').removeClass('has-success green-border');
+        $(elemnt).parents('a').addClass('has-error red-border');
+        $(elemnt).parents('a').parent().find('span.glyphicon').remove();
+        $(elemnt).parents('a').parent().find('em.error').remove();
+
+        $("<span class='select-glyph red glyphicon glyphicon-remove form-control-feedback'></span>").insertAfter($(elemnt).parents('a'));
+        $(elemnt).parents('a').after("<em class='error help-block'>This field is required.</em>");
+    }
+    else {
+        $(elemnt).parents('a').removeClass('has-error red-border');
+        $(elemnt).parents('a').addClass('has-success green-border');
+        $(elemnt).parents('a').parent().find('span.glyphicon').remove();
+        $(elemnt).parents('a').parent().find('em.error').remove();
+
+        $("<span class='select-glyph green glyphicon form-control-feedback glyphicon-ok'></span>").insertAfter($(elemnt).parents('a'));
+    }
+}
+
+function selectErrorRemove(elemnt) {
+    // debugger;
+    $(elemnt).parents('a').removeClass('has-error red-border');
+    $(elemnt).parents('a').addClass('has-success green-border');
+    $(elemnt).parents('a').parent().find('span.glyphicon').remove();
+    $(elemnt).parents('a').parent().find('em.error').remove();
+
+    $("<span class='select-glyph green glyphicon form-control-feedback glyphicon-ok'></span>").insertAfter($(elemnt).parents('a'));
+}
+
+$('.select-list').on('click',function(){
+    var id=$(this).attr('id');
+    if(id == 'fd-list')
+    {
+        var t=$(this);
+        (function () {
+            var p = t;
+            setTimeout(function () {
+                selectFdRemove($(p).parents('.select').find('.select-value'));
+            }, 400);
+        })();
+        // selectFeedback($(this).parents('.select').find('.select-value'));
+    }
+    else
+        selectErrorRemove($(this).parents('.select').find('.select-value'));
+});
+
+function selectFeedback(elemnt) {
+    // console.log('rate='+$(elemnt).text().length);
+    // console.log('msg='+$(elemnt).text().length);
+    if ($(elemnt).text().length == 0 && $('#fd-msg').text().length==0) {
+        $(elemnt).parents('a').removeClass('has-success green-border');
+        $(elemnt).parents('a').addClass('has-error red-border');
+        $(elemnt).parents('a').parent().find('span.glyphicon').remove();
+        $(elemnt).parents('a').parent().find('em.error').remove();
+        $("<span class='select-glyph red glyphicon glyphicon-remove form-control-feedback'></span>").insertAfter($(elemnt).parents('a'));
+        $(elemnt).parents('a').after("<em class='error fd-error help-block'>Please rate your experience or send us a message.</em>");
+    }
+    else
+    {
+        $(elemnt).parents('a').removeClass('has-error red-border');
+        $(elemnt).parents('a').addClass('has-success green-border');
+        $(elemnt).parents('a').parent().find('span.glyphicon').remove();
+        $(elemnt).parents('a').parent().find('em.error').remove();
+        $("<span class='select-glyph green glyphicon form-control-feedback glyphicon-ok'></span>").insertAfter($(elemnt).parents('a'));
+    }
+}
+
+function selectFdRemove(elemnt)
+{
+    setTimeout(function(){
+        $('#fd-msg').valid();
+    },200);
+    // console.log($('#fd-msg'));
+    $(elemnt).parents('a').removeClass('has-error red-border');
+    $(elemnt).parents('a').addClass('has-success green-border');
+    $(elemnt).parents('a').parent().find('span.glyphicon').remove();
+    $(elemnt).parents('a').parent().find('em.error').remove();
+    $("<span class='select-glyph green glyphicon form-control-feedback glyphicon-ok'></span>").insertAfter($(elemnt).parents('a'));
+}
+
+
+
+function applyMasks(){
+    var phones = [{ "mask": "(###) ###-####"}];
+    $('.phone').each(function(){
+        $(this).inputmask({
+            mask: phones,
+            greedy: false,
+            definitions: { '#': { validator: "[0-9]", cardinality: 1}}
+        });
+    });
+
+    // var rate = [{ "mask": "$?#.##"}];
+    $('.rate').each(function(){
+        $(this).inputmask({
+            // mask: rate,
+            groupSeparator: ',',
+            autoGroup:true,
+            alias: 'numeric',
+            digits: 2,
+            digitsOptional: false,
+            prefix: '$',
+            placeholder: ''
+        });
+    });
+}
+
+$('form').on('reset', function(e)
+{
+    $(this).find('.has-error').removeClass('has-error red-border');
+    $(this).find('.has-success').removeClass('has-success green-border');
+    $(this).find('.glyphicon').remove();
+    $(this).find('em.help-block').remove();
+});
+
+$('.close-modal').on('keydown', function (e) {
+    if ($("this:focus") && (e.which == 9)) {
+        e.preventDefault();
+        $(this).parents('form').find('input')[0].focus();
+    }
+});
+
+function checkValidity(form){
+    if($(form).find('.has-error').length === 0)
+        return true;
+    else
+        return false;
+}
+
+$(document).on('keypress','.phone',function () {
+    var val=$(this).val();
+    var ch=val.charAt(val.length-1);
+    if(ch!=='_') {
+        $(this).valid();
+    }
+});
+
+$(document).on('keypress','#edit-prof-form input[name=phone]',function (e) {
+    var val=$(this).val();
+    var ch=val.charAt(val.length-1);
+    if(ch!='_') {
+        $(this).valid();
+    }
+});
+
+$(document).ready(function () {
+    setTimeout(function () {
+        $('.fileupload-processing').removeClass('fileupload-processing');
+    },1000);
+});
+
+function enableFeedbackSubmit(response)
+{
+    if(response.length!=0)
+    {
+        $('#feedback-form input[type=submit]').prop('disabled', false);
+    }
+}
+
+function enableFeedbackPageSubmit(response)
+{
+    if(response.length!=0)
+    {
+        $('#feedback-page-form input[type=submit]').prop('disabled', false);
+    }
+}
+
+function enableContactSubmit(response)
+{
+    if(response.length!=0)
+    {
+        $('#contact-form input[type=submit]').prop('disabled', false);
+    }
+}
+
+function enableReportSubmit(response)
+{
+    if(response.length!=0)
+    {
+        $('#report-Property input[type=submit]').prop('disabled', false);
+    }
+}
+
+function enableRegisterSubmit(response)
+{
+    if(response.length!=0)
+    {
+        $('#register-form input[type=submit]').prop('disabled', false);
+    }
+}

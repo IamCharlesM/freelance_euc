@@ -1,0 +1,173 @@
+function showNavActive() {
+    var filename = location.pathname.split('/').slice(-1)[0].split('.')[0];
+    $('.active').removeClass('active');
+
+    if (filename == 'index' || filename.length == 0) {
+        $('#nav-links a[href*="index"]').parent().css('display', 'none');
+    }
+    else {
+        $('#nav-links a[href*="' + filename + '"]').parent().addClass('active');  //*= is used for contains
+    }
+}
+function showLoginForgot(options) {
+    (function () {
+        var loginPanel = $('#login-content');
+        var forgotPanel = $('#forgot-content');
+        var toShow = options.showLogin ? loginPanel : forgotPanel;
+        var toHide = options.showLogin ? forgotPanel : loginPanel;
+        var toHideVisible = toHide.css('display') === 'block';
+
+        //if the panel we want to hide is visible (flip forgot)
+        if(toHideVisible){
+            toHide.velocity('transition.flipXOut',300,function () {
+                clearVelocity(toHide);
+                toHide.css('display','none');
+                toShow.velocity('transition.flipXIn',300,function () {
+                    clearVelocity(toShow);
+                    toShow.css('display','block');
+                });
+            })
+        }
+        else{
+            toShow.slideToggle();
+            toHide.slideUp();
+        }
+    })();
+}
+
+function resetFormFields(form){
+    $(form).validate().resetForm();
+    clearValidations(form[0]);
+}
+
+function resetLoginForm(){
+    $('#login-content').slideUp();
+    setTimeout(function(){
+        $('#login-form').validate().resetForm();
+        clearValidations($('#login-form')[0]);
+    },400);
+}
+
+$(document).ready(function(){
+
+    setTimeout(
+        showNavActive,300
+    );
+
+    $(document).on('click','.register-trigger',function(e){
+       $('#register-modal').modal({keyboard: false, show:true, backdrop:"static"});
+       $('#forgot-content').slideUp();
+       $('#login-content').slideUp();
+   });
+
+    $(document).click(function(){
+        $('#forgot-content').slideUp();
+    });
+
+    // $('#login-content').hide();
+
+    $(document).on('click','#login-content',function(e){
+        e.stopPropagation();
+    });
+
+    $(document).on('click','#closelogin',function(){
+        resetLoginForm();
+    });
+
+    $(document).click(function(){
+        $('#login-content').slideUp();
+    });
+
+    var c=1;
+    $(document).on('click','.register-close',function(){
+        $('#register-modal').trigger('hidden.bs.modal');
+    });
+
+    $(document).on('click','#terms',function (e) {
+        e.stopPropagation();
+        $('#terms-conditions').modal({show:true});
+    });
+
+    $(document).on('click','#terms-close',function (e) {
+        e.stopPropagation();
+        $('#terms-conditions').modal('hide');
+    });
+
+    $(document).on('click','.login-trigger',function(e){
+        showLoginForgot({
+            showLogin: true
+        });
+         e.stopPropagation();
+    });
+
+    $(document).on('click','#forgot-trigger',function(e){
+        showLoginForgot({
+            showForgot: true
+        });
+    }) ;
+
+    $(document).on('click','#forgot-content',function(e){
+        e.stopPropagation();
+    });
+
+    $(document).on('click','#closeforgotP',function(){
+        $('#forgot-content').slideUp();
+        //$('#forgot-pass-form')[0].reset();
+    }) ;
+
+    $(document).on('click','#modify-prof',function(){
+        //$('#edit-profile').modal({keyboard: false, show:true, backdrop:"static"});
+    });
+
+    $(document).on('click','#terms',function(){
+        $([document, window]).unbind('.dialog-overlay');
+        document.activeElement.blur();
+        $('#terms-conditions').modal({keyboard: true, show:true, backdrop:"static"});
+        $('#terms-conditions').focus();
+    });
+
+    $(document).on('click','#terms-close',function(){
+        $('#terms-conditions').modal('hide');
+        $([document, window]).unbind('.dialog-overlay');
+        document.activeElement.blur();
+        $('#register-modal').focus();
+    });
+
+    String.prototype.replaceAt=function(index, replacement) {
+        return this.substr(0, index) + replacement+ this.substr(index + replacement.length);
+    }
+
+    function showMasked(elem,index,key){
+        var val = elem.val();
+        if(key!==undefined)
+            val = val+key;
+        if(index===undefined)
+        {
+            index = val.length-1;
+        }
+
+        var parent = elem.parents('.js-masked-field');
+        var textField = parent.find('[type=text]');
+        var keycode = val.charCodeAt(index);
+        if(keycode>=32)
+        {
+            textField.val('\u2022'.repeat(val.length).replaceAt(index,val.charAt(index)));
+            textField.css('z-index',2);
+
+            setTimeout(function(){
+                $(textField.attr('data-bind')).text(textField.val());
+                $(elem.attr('data-bind')).text(elem.val());
+                textField.css('z-index',-1);
+            },200);
+        }
+    }
+
+    $(document).on('keypress','.js-masked-field [type=password]',function(e){
+        var index = this.selectionStart;
+        showMasked($(this),index,e.key);
+    });
+
+    $(document).on('paste cut copy','.js-masked-field [type=password]',function(e){
+        return false
+    });
+});

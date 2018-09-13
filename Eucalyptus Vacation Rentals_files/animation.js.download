@@ -1,0 +1,59 @@
+// add the animation to the modal
+function clearVelocity(elem) {
+    elem.removeAttr('style');
+    elem.data('velocity',null);
+}
+
+function easeIn(container,callback) {
+    var open = container.attr('data-easein');
+
+    container.velocity('transition.' + open,callback);
+}
+
+function easeOut(container,callback) {
+    var open = container.attr('data-easeout');
+
+    //for avoiding multiple executions and stack overflow
+    var p = container.attr('data-inprogress');
+    container.removeAttr('data-inprogress');
+
+    if(p!='true'){
+        var x = container;
+        var e = x;
+
+        var done = function () {
+            e.attr('data-inprogress','true');
+            if(callback)
+                callback();
+        };
+
+        container.velocity('transition.' + open,300,done);
+    }
+}
+
+$(document).ready(function(){
+
+    $(document).on('show.bs.modal','.modal',function () {
+        // console.log('show');
+        var dialog = $(this).find('.modal-dialog');
+        (function () {
+            var b = dialog;
+            easeIn(b,function () {
+                clearVelocity(b);
+            });
+        })();
+    });
+
+    $(document).on('hidden.bs.modal','.modal',function () {
+        var dialog = $(this).find('.modal-dialog');
+        var modal = $(this);
+        (function () {
+            var m = modal;
+            var e = dialog;
+            easeOut(e,function () {
+                m.modal('hide');
+                clearVelocity(dialog);
+            });
+        })();
+    })
+});
