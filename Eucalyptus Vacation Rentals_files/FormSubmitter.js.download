@@ -1,0 +1,63 @@
+var FormSubmitter = function () {
+    this.jForm = null;
+};
+
+FormSubmitter.prototype.getFormData = function (form,callback) {
+    this.jForm = form;
+    callback(new FormData(form[0]));
+}
+
+FormSubmitter.prototype.validate = function () {
+    return true;
+}
+
+function showErrors(container,response) {
+    if(response.errors!=null){
+        for(var field in response.errors){
+            if(response.errors[field].length>0){
+                container.find('[data-error='+field+']').text(response.errors[field][0]);
+            }
+        }
+    }
+}
+
+function processResponse(data, container, callback) {
+    if(container)
+        container.find('[data-error]').text('');
+    if(data.success){
+        processSuccessfulResponse(data, callback);
+    }else{
+        if(container){
+            showErrors(container,data);
+        }
+    }
+}
+
+function processSuccessfulResponse(data, callback, reachedEnd) {
+    console.log(data);
+    if(callback){
+        callback();
+    }
+
+    // if(!data.dontRedirectUntilEnd || reachedEnd){
+    //     if(data.reload){
+    //         window.location.reload();
+    //     }else if(data.redirectUrl){
+    //         window.location.href = data.redirectUrl;
+    //     }
+    //     else{
+    //         if(callback)
+    //             callback(data);
+    //     }
+    // }else{
+    //     if(callback)
+    //         callback(data);
+    // }
+}
+
+FormSubmitter.prototype.processResponse = function (data) {
+    var self = this;
+    processResponse(data,this.jForm,function () {
+        self.jForm.trigger('form:submitted-successfully',[data]);
+    });
+}

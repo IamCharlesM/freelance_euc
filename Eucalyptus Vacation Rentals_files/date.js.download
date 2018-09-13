@@ -1,0 +1,34 @@
+function formatDate(strDate) {
+		var m, d, y
+		if (strDate.length == 8 && strDate.indexOf("-") < 0 && strDate.indexOf("/") < 0){
+			// The date in question is mmddyyyy
+			return strDate.replace(/(\d\d)(\d\d)(\d\d\d\d)/g, '$1/$2/$3');
+		} else if (strDate.length >= 8){
+			// The date in question is mm/dd/yyyy, m/d/yyyy, mm-dd-yyyy, or m-d-yyyy
+			strDate = strDate.replace("-", "/");
+			strDate = new Date(strDate);
+			y = strDate.getFullYear().toString();
+			m = (strDate.getMonth() + 1).toString();
+			d = strDate.getDate().toString();
+			if (m.length == 1) m = '0' + m;
+			if (d.length == 1) d = '0' + d;
+			return m + "/" + d + "/" + y;
+		} else {
+			return strDate
+		}
+	}
+
+function validateDate(value, element) {
+	var error = null;
+	var regularExpression = /^(?:\d{8})|(?:0?\s?[1-9]|1\s?[012])\s?[/-]\s?(?:0?\s?[1-9]|[12]\s?[0-9]|3\s?[01])\s?[/-]\s?(?:\d\s?\d\s?\d\s?\d)$/;
+	if(value.length>=8 && value.match(regularExpression)){
+		error = '';
+		var format = formatDate(value, element);
+		//element.value = format;
+		element.val(format);
+	} else if (value.length>0){
+		error = 'Must be formatted mm/dd/yyyy.  Please try again.';	
+	}
+
+	return error;
+}

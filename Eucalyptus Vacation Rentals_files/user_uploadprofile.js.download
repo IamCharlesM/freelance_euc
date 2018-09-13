@@ -1,0 +1,173 @@
+var numberOfloadedFiles_userprofile_maxFileSize = 1;
+function init_uploadprofile() {
+    $(document).find('#upload_userprofile').each(function() {
+        var fileUpload = this;
+        // Initialize the jQuery File Upload widget:
+        $(fileUpload).fileupload({
+            // Uncomment the following to send cross-domain cookies:
+            //xhrFields: {withCredentials: true},
+            url: api_host_url + upload_service_url_userprofile
+            , maxNumberOfFiles: 1
+            , maxFileSize: 15000000 // Only allow 15MB
+            , loadImageMaxFileSize: 20000000 // load image size 20MB
+            , acceptFileTypes: /(\.|\/)(jpeg|jpg)$/i
+            , messages: {
+                maxNumberOfFiles: '1 Maximum number of files exceeded',
+                acceptFileTypes: 'File type not allowed',
+                maxFileSize: 'The file is larger than 15 MB.  Please select another file',
+                minFileSize: 'File is too small'
+            }
+            , previewMaxWidth: 200
+            , previewMaxHeight: 200
+            , disableImageResize: false // enable compress from ui side
+            , singleFileUploads: true
+            , limitMultiFileUploads: 1
+            , sequentialUploads: true
+            , limitConcurrentUploads: 1
+        })
+        .bind('fileuploadadded', function(e, data) {
+            check_disable_enable_all_buttons_userprofile();
+
+            // add cancel event for each row
+            $("#upload_userprofile .img-div").find(".cancel").click(function() {
+                setTimeout(check_disable_enable_all_buttons_userprofile, 200);
+            });
+
+            set_preview_canvas_css_userprofile();
+        })
+        .bind('fileuploaddestroy', function (e, data) {
+            disable_all_buttons_userprofile();
+        })
+        .bind('fileuploaddestroyed', function (e, data) {
+            check_disable_enable_all_buttons_userprofile();
+        })
+        .bind('fileuploadstart', function (e, data) {
+            disable_all_buttons_userprofile();
+            $("#progress_bar_userprofile").show();
+            $("#id_btn_cancel_userprofile").prop("disabled", false);
+        })
+        .bind('fileuploaddone', function (e, data) {
+            $("#progress_bar_userprofile").hide();
+            check_disable_enable_all_buttons_userprofile();
+            setTimeout(set_preview_img_css_userprofile, 200)
+        }).bind('fileuploadsubmit', function (e, data) {
+            data.formData = {"id_token": get_id_token()};
+        });
+    })
+}
+
+function check_disable_enable_all_buttons_userprofile() {
+    disable_all_buttons_userprofile();
+
+    var rows_number = $("#upload_userprofile table tbody.files tr").length;
+    if (rows_number == 0) {
+        $("#id_btn_add_userprofile").css("pointer-events", "auto"); // add onclick event
+        $('#id_btn_add_userprofile').css('opacity', '1'); // remove grey out
+    } else if (rows_number == numberOfloadedFiles_userprofile_maxFileSize) {
+        $("#id_btn_delete_userprofile").prop("disabled", false);
+    } else {
+        $("#id_btn_add_userprofile").css("pointer-events", "auto"); // add onclick event
+        $('#id_btn_add_userprofile').css('opacity', '1'); // remove grey out
+
+        $("#id_btn_delete_userprofile").prop("disabled", false);
+    }
+
+    // check cropped images, enable start button
+    setTimeout(function() {
+        $('#upload_userprofile .btn.start').each(function() {
+            if ($(this).attr("id") == undefined && $(this).css("display") == "inline-block") {
+                $("#id_btn_start_userprofile").prop("disabled", false);
+            }
+        });
+    }, 300);
+}
+
+function disable_all_buttons_userprofile() {
+    // This element is span treat it differently
+    $("#id_btn_add_userprofile").css("pointer-events", "none"); // remove onclick event
+    $('#id_btn_add_userprofile').css('opacity', '0.65'); // grey out
+
+    $("#id_btn_start_userprofile").prop("disabled", true);
+    $("#id_btn_cancel_userprofile").prop("disabled", true);
+    $("#id_btn_delete_userprofile").prop("disabled", true);
+}
+
+function reset_userprofile() {
+    disable_all_buttons_userprofile();
+    $("#upload_userprofile table tbody.files").empty();
+    
+    $("#id_btn_add_userprofile").css("pointer-events", "auto"); // add onclick event
+    $('#id_btn_add_userprofile').css('opacity', '1'); // remove grey out
+}
+
+function top_delete_btn_userprofile() {
+    disable_all_buttons_userprofile();
+
+    var param= {
+        "id_token": get_id_token()
+    }
+
+    delete_request_param(upload_service_url_userprofile, param, function(responseJSON) {
+        reset_userprofile();
+    }, true);
+}
+
+function load_userprofile() {
+    disable_all_buttons_userprofile();
+
+    var p_header = {
+        "id_token": get_id_token()
+    }
+
+    $(document).find('#upload_userprofile').each(function() {
+        var fileUpload = this;
+
+        // Load existing user profile file:
+        $(fileUpload).addClass('fileupload-processing');
+        $.ajax({
+            // Uncomment the following to send cross-domain cookies:
+            //xhrFields: {withCredentials: true},
+            url: api_host_url + upload_service_url_userprofile,
+            headers: p_header,
+            dataType: 'json'
+        }).always(function () {
+            $(fileUpload).removeClass('fileupload-processing');
+        }).done(function (result) {
+            if (result.files.length == 0) {
+                $("#id_btn_add_userprofile").css("pointer-events", "auto"); // add onclick event
+                $('#id_btn_add_userprofile').css('opacity', '1'); // remove grey out
+            } else {
+                $("#id_btn_delete_userprofile").prop("disabled", false);
+
+                $(fileUpload).fileupload('option', 'done')
+                .call(fileUpload, $.Event('done'), {result: result});
+
+                set_preview_img_css_userprofile();
+            }
+        });
+    });
+}
+
+function set_preview_img_css_userprofile() {
+    $("#upload_userprofile .preview img").each(function() {
+        $(this).css({
+            "width": "auto"
+            , "height": "auto"
+            , "max-width": "200px"
+            , "max-height": "200px"
+        });
+    });
+}
+
+function set_preview_canvas_css_userprofile() {
+    $("#upload_userprofile .preview canvas").each(function() {
+        $(this).css({
+            "width": "auto"
+            , "height": "auto"
+            , "max-width": "200px"
+            , "max-height": "200px"
+        });
+    });
+}
+
+

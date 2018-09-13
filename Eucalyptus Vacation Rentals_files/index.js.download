@@ -1,0 +1,514 @@
+$(document).ready(function () {
+	// get and show home images
+	get_images();
+
+	document.getElementById("id_Search_DepartureDate").disabled = true; 
+	$('#id_Search_ArrivalDate').datepicker({
+		autoclose: true,
+		startDate: new Date(),
+		orientation: 'auto top',
+		forceParse: false,
+		keyboardNavigation: false,
+		todayHighlight: true,
+		showOn: "focus",
+	});
+	
+	$('#search-form,#search-formS').submit(function(e){
+        e.preventDefault();
+        var dep_d=$(this).find('input[name=departure_date]');
+        if(dep_d.val().length == 0){
+            $(dep_d).removeClass(' has-success green-border');
+            $(dep_d).parents('.js-date-picker').find('.glyphicon-ok').remove();
+        }
+        if(checkValidity($(this)))
+            //form is valid
+            window.location.href = "search-results.html?" + getSearchParam();
+    });
+	
+	//Commented out by FMA on 2018-07-03 to stop prompting users to see their location.
+	/*$(function() {
+		process_current_location(function(latitude, longitude) {
+			$("input[name='dest']").attr('latitude', latitude);
+			$("input[name='dest']").attr('longitude', longitude);
+			$("#search_tip").html("* To list all properties starting with those closest to you, just click search.");
+		});
+	});*/
+
+	function getSearchParam() {
+		//TODO change it later
+		var param = {
+			/*"latitude": 26.122438
+			,"longitude": -80.137314*/
+			"latitude": $("input[name='dest']").attr("latitude")
+			,"longitude": $("input[name='dest']").attr("longitude")
+		}
+
+		if ($("input[name='dest']").val() != "") {
+			param["dest"] = $("input[name='dest']").val();
+		}
+
+		if ($("input[name='arrive_date']").val() != "") {
+			param["arrivalDate"] = $("input[name='arrive_date']").val();
+		}
+
+		if ($("input[name='departure_date']").val() != "") {
+			param["departureDate"] = $("input[name='departure_date']").val();
+		}
+
+		if ($("input[name='guest']").val() != "") {
+			param["maxCapacity"] = $("input[name='guest']").val();
+		}
+
+		if ($("input[name='distance']").val() != "") {
+			//The user specified a maximum search radius.  Use it.
+			param["distance"] = $("input[name='distance']").val();
+		} else {
+			if ($("input[name='dest']").val() != "") {
+				/*//The user specified a default destination.  Set the maximum radius to 50 miles.
+				param["distance"] = "50";*/
+				//The user specific a default destination.  Set the maximum radius to twice the max value of the distance filter.
+				var maxSearchRadius = findMaxValue($('#index_ul_distanceDDL_values li')) * 2;
+				param["distance"] = maxSearchRadius.toString();
+			} else {
+				//We're running the default search.  The maximum radius will be set to 3959 miles by the server.
+			}
+		}
+
+		return $.param(param);
+	}
+});
+$(function(){
+	$('#id_Search_ArrivalDate').on('change keydown', function (e) {
+		if (!((e.which >= 48 && e.which <= 57) || (e.which >= 96 && e.which <= 105) || (e.which >= 37 && e.which <= 39) || e.which === 111 || e.which === 191 || e.which === 9 || e.which == 8 || e.which == 46 || e.which == 109 || e.which == 189 || e.which == 16 || e.which == 35 || e.which == 36 ||e.which===0 || e.which===undefined)) {
+			//console.log("this.name = '" + this.name + "', e.type = " + e.type + ", e.which = " + e.which);
+			e.preventDefault();
+			e.stopPropagation();
+		//Was the detected keystroke valid?  Does the Arrival Date contain a value?
+		} else if((e.which===0 || e.which===undefined) && $('#id_Search_ArrivalDate').val()) {
+			//console.log("this.name = '" + this.name + "', e.type = " + e.type + ", e.which = " + e.which);
+			setTimeout(function () {
+				//Does the Arrival Date value contain text?
+				if ($('#id_Search_ArrivalDate').val().length > 0) {
+					// Is the date properly formatted, etc?
+					var error = validateDate($('#id_Search_ArrivalDate').val(), $('#id_Search_ArrivalDate'));
+					if(error === null || error === "") {
+						//Is the Arrrival Date >= today's date?
+						if (!validate_arriveD($('#id_Search_ArrivalDate').val())) {
+							error = 'Must be greater than or equal to ' + moment().format('MM/DD/YYYY') + '.';
+						} else {
+							var arriveDate = new Date($('#id_Search_ArrivalDate').val());
+							var departDateElem = document.getElementById("id_Search_DepartureDate")
+							//If the Departure Date is disabled, let's enable it, initialize the datepicker, and set the focus.
+							if(departDateElem.disabled) {
+								departDateElem.disabled = false;
+								$('#id_Search_DepartureDate').datepicker({
+									autoclose: true,
+									startDate: arriveDate,
+									orientation: 'auto top',
+									forceParse: false,
+									keyboardNavigation: false,
+									todayHighlight: true,
+									showOn: "focus",
+								});
+								$('.datepicker').hide();
+								$('#id_Search_DepartureDate').focus();
+							} else {
+								//The Departure Date field was enabled, does it contain a value?
+								if($('#id_Search_DepartureDate').val()) {
+									//Does the Departure Date value contain text?
+									if($('#id_Search_DepartureDate').val().length > 0) {
+										//If so, is it a properly formatted date?
+										error = validateDate($('#id_Search_DepartureDate').val(), $('#id_Search_DepartureDate'));
+										if(error === null || error === "") {
+											var departDate = new Date(departDateElem.value);
+											//The Departure Date contains a properly formatted date.  Is it a valid date?
+											if (arriveDate <= departDate) {
+												//It is a properly formatted date.  Let's update the datepicket and set the focus on the Departure Date in case they want to change it.
+												$('.datepicker').hide();
+												$('#id_Search_DepartureDate').datepicker('destroy');
+												$('#id_Search_DepartureDate').datepicker({
+													autoclose: true,
+													startDate: arriveDate,
+													orientation: 'auto top',
+													forceParse: false,
+													keyboardNavigation: false,
+													todayHighlight: true,
+													showOn: "focus",
+												});
+												$('#id_Search_DepartureDate').focus();
+											} else {
+												//The Departure Date is not valid.  Clear it, reinitialize the datepicker, and set the field focus.
+												$('#id_Search_DepartureDate').datepicker('destroy');
+												$('#id_Search_DepartureDate').datepicker({
+													autoclose: true,
+													startDate: arriveDate,
+													orientation: 'auto top',
+													forceParse: false,
+													keyboardNavigation: false,
+													todayHighlight: true,
+													showOn: "focus",
+												});
+												$('.datepicker').hide();
+												$('#id_Search_DepartureDate').val('');
+												clearValidationElement($('#id_Search_DepartureDate'));
+												$('#id_Search_DepartureDate').focus();
+											}
+										} else {
+											//The Departure Date is not properly formatted.  Clear it, reinitialize the datepicker and set the focus.
+											$('#id_Search_DepartureDate').datepicker('destroy');
+											$('#id_Search_DepartureDate').datepicker({
+												autoclose: true,
+												startDate: arriveDate,
+												orientation: 'auto top',
+												forceParse: false,
+												keyboardNavigation: false,
+												todayHighlight: true,
+												showOn: "focus",
+											});
+											$('.datepicker').hide();
+											$('#id_Search_DepartureDate').val('');
+											clearValidationElement($('#id_Search_DepartureDate'));
+											$('#id_Search_DepartureDate').focus();
+										}
+										
+									} else {
+										//The Depart Date contains a value, but it is null.  Reinitialize the datepicker and set the focus.
+										$('#id_Search_DepartureDate').datepicker('destroy');
+										$('#id_Search_DepartureDate').datepicker({
+											autoclose: true,
+											startDate: arriveDate,
+											orientation: 'auto top',
+											forceParse: false,
+											keyboardNavigation: false,
+											todayHighlight: true,
+											showOn: "focus",
+										});
+										$('.datepicker').hide();
+										clearValidationElement($('#id_Search_DepartureDate'));
+										$('#id_Search_DepartureDate').focus();
+									}
+								} else {
+									//The Departure Date field value does not exist. Reinitialize the datepicker and set the focus.
+									$('#id_Search_DepartureDate').datepicker('destroy');
+									$('#id_Search_DepartureDate').datepicker({
+										autoclose: true,
+										startDate: arriveDate,
+										orientation: 'auto top',
+										forceParse: false,
+										keyboardNavigation: false,
+										todayHighlight: true,
+										showOn: "focus",
+									});
+									$('.datepicker').hide();
+									clearValidationElement($('#id_Search_DepartureDate'));
+									$('#id_Search_DepartureDate').focus();
+								}
+							}
+						}							
+					} 
+					
+					if(error === null){
+						clearValidationElement($('#id_Search_ArrivalDate'));
+					}else if(error.length == 0){
+						successValidationElement($('#id_Search_ArrivalDate'));
+					}else{
+						formValid = false;
+						errorValidationElement($('#id_Search_ArrivalDate'),error);
+					}
+				}
+			}, 500);
+		}
+	});
+	
+	$('#id_Search_DepartureDate').on('change keydown', function (e) {
+		if (!((e.which >= 48 && e.which <= 57) || (e.which >= 96 && e.which <= 105) || (e.which >= 37 && e.which <= 39) || e.which === 111 || e.which === 191 || e.which === 9 || e.which == 8 || e.which == 46 || e.which == 109 || e.which == 189 || e.which == 16 || e.which == 35 || e.which == 36 ||e.which===0 || e.which===undefined)) {
+			//console.log("this.name = '" + this.name + "', e.type = " + e.type + ", e.which = " + e.which);
+			e.preventDefault();
+			e.stopPropagation();
+		} else if((e.which===0 || e.which===undefined) && $('#id_Search_DepartureDate').val()) {
+			//console.log("this.name = '" + this.name + "', e.type = " + e.type + ", e.which = " + e.which);
+			setTimeout(function () {
+				//Does the Departure Date value contain text?
+				if ($('#id_Search_DepartureDate').val().length > 0) {
+					// Is the date properly formatted, etc?
+					var error = validateDate($('#id_Search_DepartureDate').val(), $('#id_Search_DepartureDate'));
+					if(error === null || error === "") {
+						//Is the Departure Date >= today's date?
+						var todaysDate = new Date();
+						todaysDate.setHours(0,0,0,0);
+						var departDate = new Date($('#id_Search_DepartureDate').val());
+						//if (departDate < new Date()) {
+						if (departDate < todaysDate) {
+							error = 'Must be greater than or equal to ' + moment().format('MM/DD/YYYY') + '.';
+						} else {
+							// The Departure Date is a current or future date.
+							var departDateElem = document.getElementById("id_Search_DepartureDate")									
+							//Does the Arrival Date contain a value?
+							if($('#id_Search_ArrivalDate').val()) {
+								//Does the Arrival Date value contain text?
+								if($('#id_Search_ArrivalDate').val().length > 0) {
+									//If so, is it a properly formatted date?
+									error = validateDate($('#id_Search_ArrivalDate').val(), $('#id_Search_ArrivalDate'));
+									if(error === null || error === "") {
+										var arriveDate = new Date($('#id_Search_ArrivalDate').val());
+										//The Arrival Date contains a properly formatted date.  Is it a valid date?
+										if (validate_departD($('#id_Search_DepartureDate').val())) {
+											//It is a properly formatted, valid date.  The Arrival Date is valid too.  Do nothing...
+
+										} else {
+											//The Arrival Date is not valid.  Clear it and set the field focus.
+											$('.datepicker').hide();
+											$('#id_Search_ArrivalDate').val('');
+											$('#id_Search_ArrivalDate').focus();
+										}
+									} else {
+										//The Arrival Date is not properly formatted.  Clear it and set the focus.
+										$('.datepicker').hide();
+										$('#id_Search_ArrivalDate').val('');
+										$('#id_Search_ArrivalDate').focus();
+									}
+									
+								} else {
+									//The Arrival Date contains a value, but it is null.  Set the focus.
+									$('.datepicker').hide();
+									$('#id_Search_ArrivalDate').focus();
+								}
+							} else {
+								//The Arrival Date field value does not exist. Set the focus.
+								$('.datepicker').hide();
+								$('#id_Search_ArrivalDate').focus();
+							}
+						}							
+					} 
+					
+					if(error === null){
+						clearValidationElement($('#id_Search_DepartureDate'));
+					}else if(error.length == 0){
+						successValidationElement($('#id_Search_DepartureDate'));
+					}else{
+						formValid = false;
+						errorValidationElement($('#id_Search_DepartureDate'),error);
+					}
+				}
+			}, 500);
+		}
+	});
+		
+	// add click event for home search button
+	var geocoder;
+	$(document).on('click', '#search-button', function (e) {
+		var elem = $(this);
+		var form = elem.parents('.js-submit-form');
+		var error = '';
+		var arrivalElem = form.find('[name=arrive_date]');
+		var departureElem = form.find('[name=departure_date]');
+		var destination = form.find("[name=dest]");
+
+		if (arrivalElem.val().length > 0 && !departureElem.val()) {
+			error = 'Must be greater than or equal to the Arrival Date (' + arrivalElem.val() + ")";
+			errorValidationElement(departureElem,error);
+			departureElem.focus();
+			return;
+		} else if (departureElem.val().length > 0 && !arrivalElem.val()){
+			error = 'Must be less than or equal to the Departure Date (' + departureElem.val() + ")";
+			errorValidationElement(arrivalElem,error);
+			arrivalElem.focus();
+			return;	
+		}
+		if (error.length === 0) {
+			// location not detected case
+			if (destination.attr('latitude') == undefined) {
+				destination.focus();
+				return;
+			}
+
+			// default search case - location detected by browser
+			if (destination.val() == "" && destination.attr("latitude") != undefined) {
+				form.trigger('submit');
+				return;
+			}
+
+			if (geocoder == undefined) {
+				geocoder = new google.maps.Geocoder();
+			}
+
+			//Use the selected destination
+			if (destination.attr("is_selected") == "true") {
+				form.trigger('submit');
+				return;
+			} else {
+				// use the first suggested destination in the list provided by Google case
+				var address = $(".pac-container .pac-item:first span:eq(3)").text(); // get first destination from dropdown list
+				get_latitude_longitude_from_address(geocoder, address, function(latitude, longitude) {
+					destination.attr('latitude', latitude);
+					destination.attr('longitude', longitude);
+					destination.attr('is_selected', true);
+
+					form.trigger('submit');
+					return;
+				});
+			}
+		} 
+	});
+});
+
+function clearValidationElement(element) {
+	element.parent().find('em.error').remove();
+	element.parent().parent().find('.glyphicon').remove();
+	element.removeClass("has-success green-border has-error red-border");
+}
+
+function successValidationElement(element) {
+	clearValidationElement(element);
+	element.attr('data-verify', true);
+	var form = element.parents('.js-submit-form');
+	element.addClass("has-success green-border");
+	$("<span class='date-glyph green glyphicon glyphicon-ok form-control-feedback'></span>").insertAfter(element);
+}
+
+function errorValidationElement(element,error) {
+	clearValidationElement(element);
+	element.attr('data-verify', false);
+	element.addClass("has-error red-border");
+	element.after("<em class='error help-block'>" + error + "</em>");
+	$("<span class='date-glyph red glyphicon glyphicon-remove form-control-feedback'></span>").insertAfter(element);
+}
+
+//for search form
+function validate_arriveD(value){
+	var entered = moment(value,'MM/DD/YYYY');
+	var d1=entered.diff(moment(),'days');
+	var valid = (d1>=0);
+	return valid;
+}
+
+function validate_departD(value){
+	var arrival=$('#dateArrive input[type=text]').val();
+	if(arrival.length<=2)
+		return false;
+
+	var arrivalD = moment(arrival,'MM/DD/YYYY');
+	var entered = moment(value,'MM/DD/YYYY');
+	var d1=entered.diff(arrivalD,'days');
+	var valid = (d1>=0);
+	return valid;
+}
+
+
+
+function get_images() {
+    get_list(homepageimages_service_url + "/indexpage", {}, show_images);
+}
+
+function show_images(p_data) {
+    $("#result_list_images").html($("#result_template_images").render(p_data));
+    $('.cycle-slideshow').cycle({
+        fx: 'fade' // choose your transition type, ex: fade, scrollUp, shuffle, etc...
+    });
+}
+
+$('#index_referralProg_moreInfo').click(function(){
+	event.preventDefault();
+   $("#index_refProgDetails").modal('show');
+});
+
+$('#index_foundersProgDetails_moreInfo').click(function(){
+	event.preventDefault();
+   $("#index_foundersProgDetails").modal('show');
+});
+
+// When document is ready
+/*$(function() {
+    process_current_location(function(latitude, longitude) {
+    	$("input[name='dest']").attr('latitude', latitude);
+        $("input[name='dest']").attr('longitude', longitude);
+        $("#search_tip").html("* To list all properties starting with those closest to you, just click search.");
+    });
+
+    get_images();
+}); */
+
+/* function getSearchParam() {
+    //TODO change it later
+	var param = {
+        "latitude": 26.122438
+        ,"longitude": -80.137314
+    }
+
+    if ($("input[name='dest']").val() != "") {
+        param["dest"] = $("input[name='dest']").val();
+    }
+
+	if ($("input[name='arrive_date']").val() != "") {
+        param["arrivalDate"] = $("input[name='arrive_date']").val();
+    }
+
+    if ($("input[name='departure_date']").val() != "") {
+        param["departureDate"] = $("input[name='departure_date']").val();
+    }
+
+    if ($("input[name='guest']").val() != "") {
+        param["maxCapacity"] = $("input[name='guest']").val();
+    }
+
+    if ($("input[name='distance']").val() != "") {
+        param["distance"] = $("input[name='distance']").val();
+    }
+
+    return $.param(param);
+} */
+
+// add click event for home search button
+/* var geocoder;
+$(document).on('click', '#search-button', function (e) {
+    var elem = $(this);
+    var form = elem.parents('.js-submit-form');
+    var error = '';
+    var arrivalElem = form.find('[name=arrive_date]');
+    var departureElem = form.find('[name=departure_date]');
+    var destination = form.find("[name=dest]");
+
+    if (arrivalElem.val().length > 0 && !departureElem.val()) {
+        error = 'Please select a Departure Date greater that or equal to the Arrival Date (' + arrivalElem.val() + ")";
+    }
+
+    if (error.length === 0) {
+    	// location not detected case
+	    if (destination.attr('latitude') == undefined) {
+	    	destination.focus();
+	    	return;
+	    }
+
+        // default search case
+        if (destination.val() == "" && destination.attr("latitude") != undefined) {
+            successValidationElement(departureElem);
+        	form.trigger('submit');
+            return;
+        }
+
+        if (geocoder == undefined) {
+            geocoder = new google.maps.Geocoder();
+        }
+
+        if (destination.attr("is_selected") == "true") {
+            successValidationElement(departureElem);
+            form.trigger('submit');
+            return;
+        } else {
+            // use the first suggested destination in the list provided by Google case
+            var address = $(".pac-container .pac-item:first span:eq(3)").text(); // get first destination from dropdown list
+            get_latitude_longitude_from_address(geocoder, address, function(latitude, longitude) {
+                destination.attr('latitude', latitude);
+                destination.attr('longitude', longitude);
+                destination.attr('is_selected', true);
+
+                successValidationElement(departureElem);
+                form.trigger('submit');
+                return;
+            });
+        }
+    } else {
+        errorValidationElement(departureElem, error);
+    }
+}); */
+

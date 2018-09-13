@@ -1,0 +1,113 @@
+(function () {
+    var componentForm = {
+        locality: 'long_name',
+        administrative_area_level_1: 'short_name',
+        country: 'long_name',
+        postal_code: 'short_name'
+    };
+
+    // Bias the autocomplete object to the user's geographical location,
+    // as supplied by the browser's 'navigator.geolocation' object.
+    function geolocate(elem) {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                var geolocation = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                };
+                var circle = new google.maps.Circle({
+                    center: geolocation,
+                    radius: position.coords.accuracy
+                });
+
+                elem.data('autocomplete').setBounds(circle.getBounds());
+            });
+        }
+    }
+
+    function initAutocomplete() {
+        function init(elem) {
+            // Create the autocomplete object, restricting the search to geographical
+            // location types.
+            var autocomplete = new google.maps.places.Autocomplete(
+                /** @type {!HTMLInputElement} */elem,
+                {types: ['geocode']});
+
+            // When the user selects an address from the dropdown, populate the address
+            // fields in the form.
+            $(elem).data('autocomplete',autocomplete);
+            autocomplete.addListener('place_changed', function () {
+                fillInAddress($(elem),autocomplete);
+
+                // Add post action if needed
+                if ($(elem).attr("func")) {
+                    window[$(elem).attr("func")]()
+                }
+            });
+        }
+
+        $('.autocomplete').each(function () {
+            init($(this)[0]);
+        })
+    }
+    window.initAutocomplete = initAutocomplete;
+
+    function fillInAddress(elem,autocomplete) {
+        // Get the place details from the autocomplete object.
+		//console.log($(elem).attr('id'));
+        var place = autocomplete.getPlace();
+		console.log(place.name);
+        var parent = elem.parents('form');
+        for (var component in componentForm) {
+            parent.find('.'+component).val('');
+        }
+
+        // Get each component of the address from the place details
+        // and fill the corresponding field on the form.
+        for (var i = 0; i < place.address_components.length; i++) {
+            var addressType = place.address_components[i].types[0];
+            if (componentForm[addressType]) {
+                var val = place.address_components[i][componentForm[addressType]];
+                parent.find('.'+addressType).val(val);
+            }
+        }
+		if($(elem).attr('id') == 'modify-profile_address1'){
+			//console.log(place.formatted_address.substring(0, place.formatted_address.indexOf(",")));
+			$(elem).val(place.formatted_address.substring(0, place.formatted_address.indexOf(",")));
+		}	
+
+        elem.attr('data-length',elem.val().length);
+
+        // Add latitude and longitude
+        elem.attr('latitude', place.geometry.location.lat());
+        elem.attr('longitude', place.geometry.location.lng());
+        elem.attr('is_selected', true);
+    }
+
+    $('.autocomplete').on('keydown',function (e) {
+    	$(this).attr('is_selected', false);
+    	
+        if (e.which == 13 && $('.pac-container:visible').length)
+            return false;
+    });
+
+    /*
+    $('.autocomplete').on('focus',function (e) {
+        geolocate($(this));
+    });
+    */
+
+    $('.autocomplete').keyup(function (e) {
+        var length = $(this).attr('data-length');
+        if (length)
+            length = parseInt(length);
+        var parent = $(this).parents('form');
+
+        if (length != $(this).val().length) {
+            parent.find('.locality').val('');
+            parent.find('.postal_code').val('');
+            parent.find('.country').val('');
+            parent.find('.administrative_area_level_1').val('');
+        }
+    });
+})();
